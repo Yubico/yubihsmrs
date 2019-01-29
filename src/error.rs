@@ -19,12 +19,14 @@ use std::error;
 use std::fmt;
 
 /// Enum listing possible errors from `YubiHSM`.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Error {
     /// An error from an underlying libyubihsm call.
     LibYubiHsm(lyh::Error),
     /// Unexpected length value
     WrongLength(usize, usize),
+    /// Unexpected or unsupported parameter
+    InvalidParameter(String),
 }
 
 impl fmt::Display for Error {
@@ -34,6 +36,7 @@ impl fmt::Display for Error {
             Error::WrongLength(ref exp, ref found) => {
                 write!(f, "Wrong length, expected {}, found {}", exp, found)
             }
+            Error::InvalidParameter(ref param) => write!(f, "Invalid parameter: {}", param),
         }
     }
 }
@@ -43,6 +46,7 @@ impl error::Error for Error {
         match *self {
             Error::LibYubiHsm(ref err) => err.description(),
             Error::WrongLength(_, _) => "Wrong length",
+            Error::InvalidParameter(_) => "Invalid parameter",
         }
     }
 
@@ -50,6 +54,7 @@ impl error::Error for Error {
         match *self {
             Error::LibYubiHsm(ref err) => Some(err),
             Error::WrongLength(_, _) => None,
+            Error::InvalidParameter(_) => None,
         }
     }
 }

@@ -22,6 +22,9 @@ use lyh::{yh_algorithm, yh_capabilities, yh_object_descriptor, yh_object_type};
 use error::Error;
 
 use std::collections::HashMap;
+use std::str::FromStr;
+
+use Session;
 
 #[derive(Debug, Clone, Copy)]
 /// Object types
@@ -863,6 +866,138 @@ impl From<ObjectAlgorithm> for yh_algorithm {
             ObjectAlgorithm::EcdsaSha512 => yh_algorithm::YH_ALGO_EC_ECDSA_SHA512,
             ObjectAlgorithm::Ed25519 => yh_algorithm::YH_ALGO_EC_ED25519,
             ObjectAlgorithm::EcP224 => yh_algorithm::YH_ALGO_EC_P224,
+        }
+    }
+}
+
+impl FromStr for ObjectAlgorithm {
+    type Err = Error;
+    fn from_str(algorithm: &str) -> Result<Self, Self::Err> {
+        let mut algo = yh_algorithm::YH_ALGO_ANY;
+        let c_str = ::std::ffi::CString::new(algorithm).unwrap();
+        try!(::error::result_from_libyh(unsafe {
+            lyh::yh_string_to_algo(c_str.as_ptr(), &mut algo)
+        }));
+        Ok(ObjectAlgorithm::from(&algo))
+    }
+}
+
+impl ObjectAlgorithm {
+    /// Returns whether the algorithm is an RSA key algorithm or not
+    pub fn is_rsa(algorithm: ObjectAlgorithm) -> bool {
+        let res = unsafe { lyh::yh_is_rsa(algorithm.into()) };
+        res
+    }
+}
+
+/// struct representing an asymmetric key
+#[derive(Debug, Clone)]
+pub struct AsymmetricKey {
+    key_id: u16,
+    label: String,
+    algorithm: ObjectAlgorithm,
+    capabilities: Vec<ObjectCapability>,
+    domains: Vec<ObjectDomain>,
+}
+
+impl AsymmetricKey {
+    /// Returns the Object ID of the key
+    pub fn get_key_id(&self) -> u16 {
+        self.key_id
+    }
+
+    /// Returns whether the algorithm is an RSA key algorithm or not
+    pub fn is_rsa(&self) -> bool {
+        let res = unsafe { lyh::yh_is_rsa(self.algorithm.into()) };
+        res
+    }
+
+    /// Returns whether the algorithm is an EC key algorithm or not
+    pub fn is_ec(&self) -> bool {
+        let res = unsafe { lyh::yh_is_ec(self.algorithm.into()) };
+        res
+    }
+
+    /// Returns whether the algorithm is an Ed key algorithm or not
+    pub fn is_ed(&self) -> bool {
+        let res = unsafe { lyh::yh_is_ed(self.algorithm.into()) };
+        res
+    }
+
+    /// Creates a new instance of AsymmetricKey
+    pub fn new(
+        key_id: u16,
+        label: String,
+        algorithm: ObjectAlgorithm,
+        capabilities: Vec<ObjectCapability>,
+        domains: Vec<ObjectDomain>,
+    ) -> AsymmetricKey {
+        AsymmetricKey {
+            key_id: key_id,
+            label: label,
+            algorithm: algorithm,
+            capabilities: capabilities,
+            domains: domains,
+        }
+    }
+
+    /// Signs an attestation certificate for another asymmetric key
+    pub fn sign_attestation_certificate(
+        &self,
+        keyid_to_attest: u16,
+        session: &Session,
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_sign_attestation_certificate(
+                session.ptr,
+                self.key_id,
+                keyid_to_attest,
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        try!(::error::result_from_libyh(res));
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+}
+
+/// struct representing an opaque object
+#[derive(Debug)]
+pub struct OpaqueObject {
+    object_id: u16,
+    label: String,
+    algorithm: ObjectAlgorithm,
+    capabilities: Vec<ObjectCapability>,
+    domains: Vec<ObjectDomain>,
+}
+
+impl OpaqueObject {
+    /// Returns the Object ID of the key
+    pub fn get_id(&self) -> u16 {
+        self.object_id
+    }
+
+    /// Creates a new instance of AsymmetricKey
+    pub fn new(
+        object_id: u16,
+        label: String,
+        algorithm: ObjectAlgorithm,
+        capabilities: Vec<ObjectCapability>,
+        domains: Vec<ObjectDomain>,
+    ) -> OpaqueObject {
+        OpaqueObject {
+            object_id: object_id,
+            label: label,
+            algorithm: algorithm,
+            capabilities: capabilities,
+            domains: domains,
         }
     }
 }
