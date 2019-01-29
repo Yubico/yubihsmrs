@@ -45,7 +45,10 @@ use error::Error;
 
 pub mod object;
 
-use object::{ObjectAlgorithm, ObjectCapability, ObjectDescriptor, ObjectDomain, ObjectHandle};
+use object::{
+    AsymmetricKey, ObjectAlgorithm, ObjectCapability, ObjectDescriptor, ObjectDomain, ObjectHandle,
+    OpaqueObject,
+    };
 
 pub mod otp;
 
@@ -427,6 +430,103 @@ impl Session {
             object_type: (&object_type).into(),
         })
     }
+
+    /// Import an opaque object
+    pub fn import_opaque(
+        &self,
+        object_id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        algorithm: ObjectAlgorithm,
+        bytes: &[u8],
+    ) -> Result<OpaqueObject, Error> {
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let mut id: u16 = object_id;
+
+        let res = unsafe {
+            lyh::yh_util_import_opaque(
+                self.ptr,
+                &mut id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                algorithm.into(),
+                bytes.as_ptr(),
+                bytes.len(),
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        Ok(OpaqueObject::new(
+            id,
+            label.to_string(),
+            algorithm,
+            capabilities.to_vec(),
+            domains.to_vec(),
+        ))
+    }
+
+    /// Generate a new asymmetric key
+    pub fn generate_asymmetric_key(
+        &self,
+        label: &str,
+        capabilities: &[ObjectCapability],
+        domains: &[ObjectDomain],
+        key_algorithm: ObjectAlgorithm,
+    ) -> Result<AsymmetricKey, Error> {
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let mut key_id: u16 = 0;
+        if unsafe { lyh::yh_is_rsa(key_algorithm.into()) } {
+            let res = unsafe {
+                lyh::yh_util_generate_rsa_key(
+                    self.ptr,
+                    &mut key_id,
+                    c_str.as_ptr(),
+                    ObjectDomain::primitive_from_slice(domains),
+                    &ObjectCapability::primitive_from_slice(capabilities),
+                    key_algorithm.into(),
+                )
+            };
+            try!(::error::result_from_libyh(res));
+        } else if unsafe { lyh::yh_is_ec(key_algorithm.into()) } {
+            let res = unsafe {
+                lyh::yh_util_generate_ec_key(
+                    self.ptr,
+                    &mut key_id,
+                    c_str.as_ptr(),
+                    ObjectDomain::primitive_from_slice(domains),
+                    &ObjectCapability::primitive_from_slice(capabilities),
+                    key_algorithm.into(),
+                )
+            };
+            try!(::error::result_from_libyh(res));
+        } else if unsafe { lyh::yh_is_ed(key_algorithm.into()) } {
+            let res = unsafe {
+                lyh::yh_util_generate_ed_key(
+                    self.ptr,
+                    &mut key_id,
+                    c_str.as_ptr(),
+                    ObjectDomain::primitive_from_slice(domains),
+                    &ObjectCapability::primitive_from_slice(capabilities),
+                    key_algorithm.into(),
+                )
+            };
+            try!(error::result_from_libyh(res));
+        } else {
+            return Err(Error::InvalidParameter("Key algorithm".to_string()));
+        }
+
+        Ok(AsymmetricKey::new(
+            key_id,
+            label.to_string(),
+            key_algorithm,
+            capabilities.to_vec(),
+            domains.to_vec(),
+        ))
+    }
 }
 
 impl Drop for Session {
@@ -446,6 +546,8 @@ mod test {
     use std::thread;
     use std::time::Duration;
 
+    extern crate base64;
+
     const ENV_VAR: &str = "YUBIHSM_DIRECT_USB";
     const CONNECTOR_URL: &str = "http://127.0.0.1:12345";
     const DIRECT_USB_URL: &str = r"yhusb://";
@@ -455,6 +557,22 @@ mod test {
         0x4f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d,
         0x4e, 0x4f,
     ];
+    const CERT: &str = "MIIC+jCCAeKgAwIBAgIGAWbt9mc3MA0GCSqGSIb3DQEBBQUAMD4xPDA6BgNVBAMM\
+                        M0R1bW15IGNlcnRpZmljYXRlIGNyZWF0ZWQgYnkgYSBDRVNlQ29yZSBhcHBsaWNh\
+                        dGlvbjAeFw0xODExMDcxMTM3MjBaFw00ODEwMzExMTM3MjBaMD4xPDA6BgNVBAMM\
+                        M0R1bW15IGNlcnRpZmljYXRlIGNyZWF0ZWQgYnkgYSBDRVNlQ29yZSBhcHBsaWNh\
+                        dGlvbjCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMTxMBMtwHJCzNHi\
+                        d0GszdXM49jQdEZOuaLK1hyIjpuhRImJYbdvmF5cYa2suR2yw6DygWGFLafqVEuL\
+                        dXvnib3r0jBX2w7ZSrPWuJ592QUgNllHCvNG/dNgwLfCVOr9fs1ifJaa09gtQ2EG\
+                        3iV7j3AMxb7rc8x4d3nsJad+UPCyqB3HXGDRLbOT38zI72zhXm4BqiCMt6+2rcPE\
+                        +nneNiTMVjrGwzbZkCak6xnwq8/tLTtvD0+yPLQdKb4NaQfXPmYNTrzTmvYmVD8P\
+                        0bIUo/CoXIh0BkJXwHzX7J9nDW9Qd7BR2Q2vbUaou/STlWQooqoTnVnEK8zvAXkl\
+                        ubqSUPMCAwEAATANBgkqhkiG9w0BAQUFAAOCAQEAGXwmRWewOcbPV/Jx6wkNDOvE\
+                        oo4bieBqeRyU/XfDYbuevfNSBnbQktThl1pR21hrJ2l9qV3D1AJDKck/x74hyjl9\
+                        mh37eqbPAdfx3yY7vN03RYWr12fW0kLJA9bsm0jYdJN4BHV/zCXlSqPS0The+Zfg\
+                        eVCiQCnEZx/z1jfxwIIg6N8Y7luPWIi36XsGqI75IhkJFw8Jup5HIB4p4P0txinm\
+                        hxzAwAjKm7yCiBA5oxX1fvSPdlwMb9mcO7qC5wKrsMyuzIpllBbGaCRFCcAtu9Zu\
+                        MvBJNrMLPK3bz4QvT5dYW/cXcjJbnIDqQKqSVV6feYk3iyS07HkaPGP3rxGpdQ==";
 
     macro_rules! create_hsm {
         () => {
@@ -798,4 +916,83 @@ mod test {
 
         super::exit().unwrap();
     }
+
+    #[test]
+    fn import_opaque() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let cert = base64::decode(CERT).unwrap();
+
+        let opaque = session
+            .import_opaque(
+                0,
+                "Test certificate",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &vec![],
+                ObjectAlgorithm::OpaqueX509Certificate,
+                &cert,
+            ).unwrap();
+
+        session.close().unwrap();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let info = session.get_object_info(opaque.get_id(), ObjectType::Opaque);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session
+            .delete_object(opaque.get_id(), ObjectType::Opaque)
+            .unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn generate_asymmetric_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let capabilities = vec![
+            ObjectCapability::SignPkcs,
+            ObjectCapability::SignPss,
+            ObjectCapability::SignAttestationCertificate,
+        ];
+
+        let key = session
+            .generate_asymmetric_key(
+                "Test key generation",
+                &capabilities,
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                ObjectAlgorithm::Rsa2048,
+            ).unwrap();
+
+        session.close().unwrap();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let info = session.get_object_info(key.get_key_id(), ObjectType::AsymmetricKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session
+            .delete_object(key.get_key_id(), ObjectType::AsymmetricKey)
+            .unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
 }
