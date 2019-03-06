@@ -170,7 +170,7 @@ pub enum Error {
     /// Object with given ID and type already exists
     ObjectExists,
 
-    /// Connector opeartion failed
+    /// Connector operation failed
     ConnectorError,
 }
 
@@ -239,7 +239,7 @@ fn code_to_str(return_code: Error) -> &'static str {
         Error::DeviceCmdUnexecuted => "The command execution has not terminated",
         Error::GenericError => "Generic error",
         Error::ObjectExists => "Object with given ID and type already exists",
-        Error::ConnectorError => "Connector opeartion failed",
+        Error::ConnectorError => "Connector operation failed",
     }
 }
 
