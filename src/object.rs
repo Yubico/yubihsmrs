@@ -885,8 +885,9 @@ impl FromStr for ObjectAlgorithm {
 impl ObjectAlgorithm {
     /// Returns whether the algorithm is an RSA key algorithm or not
     pub fn is_rsa(algorithm: ObjectAlgorithm) -> bool {
-        let res = unsafe { lyh::yh_is_rsa(algorithm.into()) };
-        res
+        {
+            unsafe { lyh::yh_is_rsa(algorithm.into()) }
+        }
     }
 }
 
@@ -908,20 +909,17 @@ impl AsymmetricKey {
 
     /// Returns whether the algorithm is an RSA key algorithm or not
     pub fn is_rsa(&self) -> bool {
-        let res = unsafe { lyh::yh_is_rsa(self.algorithm.into()) };
-        res
+        unsafe { lyh::yh_is_rsa(self.algorithm.into()) }
     }
 
     /// Returns whether the algorithm is an EC key algorithm or not
     pub fn is_ec(&self) -> bool {
-        let res = unsafe { lyh::yh_is_ec(self.algorithm.into()) };
-        res
+        unsafe { lyh::yh_is_ec(self.algorithm.into()) }
     }
 
     /// Returns whether the algorithm is an Ed key algorithm or not
     pub fn is_ed(&self) -> bool {
-        let res = unsafe { lyh::yh_is_ed(self.algorithm.into()) };
-        res
+        unsafe { lyh::yh_is_ed(self.algorithm.into()) }
     }
 
     /// Creates a new instance of AsymmetricKey
@@ -933,11 +931,11 @@ impl AsymmetricKey {
         domains: Vec<ObjectDomain>,
     ) -> AsymmetricKey {
         AsymmetricKey {
-            key_id: key_id,
-            label: label,
-            algorithm: algorithm,
-            capabilities: capabilities,
-            domains: domains,
+            key_id,
+            label,
+            algorithm,
+            capabilities,
+            domains,
         }
     }
 
@@ -993,11 +991,11 @@ impl OpaqueObject {
         domains: Vec<ObjectDomain>,
     ) -> OpaqueObject {
         OpaqueObject {
-            object_id: object_id,
-            label: label,
-            algorithm: algorithm,
-            capabilities: capabilities,
-            domains: domains,
+            object_id,
+            label,
+            algorithm,
+            capabilities,
+            domains,
         }
     }
 }

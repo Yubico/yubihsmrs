@@ -48,7 +48,7 @@ pub mod object;
 use object::{
     AsymmetricKey, ObjectAlgorithm, ObjectCapability, ObjectDescriptor, ObjectDomain, ObjectHandle,
     OpaqueObject,
-    };
+};
 
 pub mod otp;
 
@@ -119,20 +119,19 @@ impl YubiHsm {
     ) -> Result<Session, Error> {
         let session_ptr: *mut yh_session = ::std::ptr::null_mut();
 
-        try!(
-            error::result_from_libyh(unsafe {
-                lyh::yh_create_session_derived(
-                    self.connector,
-                    key_id,
-                    password.as_ptr(),
-                    password.len(),
-                    reopen,
-                    &session_ptr,
-                )
-            }).and(error::result_from_libyh(unsafe {
-                lyh::yh_authenticate_session(session_ptr)
-            }))
-        );
+        try!(error::result_from_libyh(unsafe {
+            lyh::yh_create_session_derived(
+                self.connector,
+                key_id,
+                password.as_ptr(),
+                password.len(),
+                reopen,
+                &session_ptr,
+            )
+        })
+        .and(error::result_from_libyh(unsafe {
+            lyh::yh_authenticate_session(session_ptr)
+        })));
 
         Ok(Session { ptr: session_ptr })
     }
@@ -332,7 +331,7 @@ impl Session {
         Ok(real_id)
     }
 
-    #[cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
+    #[allow(clippy::too_many_arguments)]
     /// Import a wrapkey
     pub fn import_wrap_key(
         &self,
@@ -688,7 +687,8 @@ mod test {
                 &vec![],
                 &vec![],
                 "PASSWORD".as_bytes(),
-            ).unwrap();
+            )
+            .unwrap();
 
         session
             .delete_object(id, ObjectType::AuthenticationKey)
@@ -714,19 +714,16 @@ mod test {
                 &vec![],
                 &vec![],
                 "PASSWORD".as_bytes(),
-            ).unwrap();
+            )
+            .unwrap();
 
-        assert!(
-            session
-                .delete_object(id, ObjectType::AuthenticationKey)
-                .is_ok()
-        );
+        assert!(session
+            .delete_object(id, ObjectType::AuthenticationKey)
+            .is_ok());
 
-        assert!(
-            session
-                .delete_object(id, ObjectType::AuthenticationKey)
-                .is_err()
-        );
+        assert!(session
+            .delete_object(id, ObjectType::AuthenticationKey)
+            .is_err());
 
         session.close().unwrap();
 
@@ -761,7 +758,8 @@ mod test {
                 &vec![ObjectCapability::DeleteAuthenticationKey],
                 &vec![],
                 "PASSWORD".as_bytes(),
-            ).unwrap();
+            )
+            .unwrap();
 
         session.close().unwrap();
 
@@ -798,7 +796,8 @@ mod test {
                 ObjectAlgorithm::Aes256CcmWrap,
                 &[],
                 &WRAPKEY,
-            ).unwrap();
+            )
+            .unwrap();
 
         let info = session.get_object_info(id, ObjectType::WrapKey);
 
@@ -835,7 +834,8 @@ mod test {
                     ObjectCapability::ExportableUnderWrap,
                 ],
                 &WRAPKEY,
-            ).unwrap();
+            )
+            .unwrap();
 
         let wrap = session.export_wrapped(id, ObjectType::WrapKey, id);
 
@@ -874,7 +874,8 @@ mod test {
                     ObjectCapability::DeleteWrapKey,
                 ],
                 &WRAPKEY,
-            ).unwrap();
+            )
+            .unwrap();
 
         let auth_id = session
             .import_authentication_key(
@@ -888,7 +889,8 @@ mod test {
                 ],
                 &vec![],
                 "PASSWORD".as_bytes(),
-            ).unwrap();
+            )
+            .unwrap();
 
         let wrap = session
             .export_wrapped(wrap_id, ObjectType::AuthenticationKey, auth_id)
@@ -934,7 +936,8 @@ mod test {
                 &vec![],
                 ObjectAlgorithm::OpaqueX509Certificate,
                 &cert,
-            ).unwrap();
+            )
+            .unwrap();
 
         session.close().unwrap();
 
@@ -974,7 +977,8 @@ mod test {
                 &capabilities,
                 &ObjectDomain::vec_from_str("all").unwrap(),
                 ObjectAlgorithm::Rsa2048,
-            ).unwrap();
+            )
+            .unwrap();
 
         session.close().unwrap();
 
