@@ -390,7 +390,7 @@ impl ObjectCapability {
         let mut v = Vec::new();
 
         for i in 0..capabilities.capabilities.len() {
-            for j in 0..7 {
+            for j in 0..8 {
                 let x = CAPABILITIES_MAP
                     .get(&(i as u8, capabilities.capabilities[7 - i] & (1 << j) as u8));
                 if x.is_some() {
