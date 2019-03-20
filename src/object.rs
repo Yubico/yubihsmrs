@@ -23,6 +23,7 @@ use error::Error;
 
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::fmt;
 
 use Session;
 
@@ -708,6 +709,17 @@ impl<'a> From<&'a ObjectType> for yh_object_type {
     }
 }
 
+impl fmt::Display for ObjectType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+	let yh_type = yh_object_type::from(self);
+	let type_name = ::std::ffi::CString::new("").unwrap();
+	::error::result_from_libyh(unsafe {
+            lyh::yh_type_to_string(yh_type, &mut type_name.as_ptr())
+        }).ok();
+	write!(f, "{}", type_name.to_str().unwrap())
+    }
+}
+
 impl<'a> From<&'a yh_object_descriptor> for ObjectHandle {
     fn from(descriptor: &'a yh_object_descriptor) -> Self {
         ObjectHandle {
@@ -726,12 +738,6 @@ impl<'a> From<&'a yh_object_descriptor> for ObjectHandle {
         }
     }
 }
-
-/*impl From<(u8, u8)> for ObjectCapability {
-    fn from(key: (u8, u8)) -> Self {
-        CAPABILITIES_MAP[&key]
-    }
-}*/
 
 impl<'a> From<&'a ObjectCapability> for (u8, u8) {
     fn from(capability: &'a ObjectCapability) -> Self {
