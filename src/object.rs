@@ -711,12 +711,16 @@ impl<'a> From<&'a ObjectType> for yh_object_type {
 
 impl fmt::Display for ObjectType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-	let yh_type = yh_object_type::from(self);
-	let type_name = ::std::ffi::CString::new("").unwrap();
-	::error::result_from_libyh(unsafe {
-            lyh::yh_type_to_string(yh_type, &mut type_name.as_ptr())
-        }).ok();
-	write!(f, "{}", type_name.to_str().unwrap())
+		let yh_type = yh_object_type::from(self);
+		let cstr = ::std::ffi::CString::new("").unwrap();
+		let mut cstrp = vec![cstr.as_ptr()];
+
+		::error::result_from_libyh(unsafe {
+            lyh::yh_type_to_string(yh_type, cstrp.as_mut_ptr())
+        	}).unwrap_or_else(|err| println!("{:?}", err)) ;
+
+		let name = unsafe{::std::ffi::CStr::from_ptr(*cstrp.get(0).unwrap())};
+		write!(f, "{}", name.to_string_lossy().into_owned())
     }
 }
 
