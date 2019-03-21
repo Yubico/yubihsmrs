@@ -999,4 +999,21 @@ mod test {
         super::exit().unwrap();
     }
 
+    #[test]
+    fn string_conversions() {
+        let types = vec![
+            (ObjectType::AsymmetricKey, "asymmetric-key"),
+            (ObjectType::AuthenticationKey, "authentication-key"),
+            (ObjectType::HmacKey, "hmac-key"),
+            (ObjectType::Opaque, "opaque"),
+            (ObjectType::OtpAeadKey, "otp-aead-key"),
+            (ObjectType::Template, "template"),
+            (ObjectType::WrapKey, "wrap-key"),
+        ];
+
+        for t in types {
+            assert_eq!(&t.0.to_string(), t.1);
+        }
+    }
+
 }

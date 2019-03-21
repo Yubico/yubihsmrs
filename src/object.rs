@@ -708,6 +708,25 @@ impl<'a> From<&'a ObjectType> for yh_object_type {
     }
 }
 
+impl std::fmt::Display for ObjectType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut ptr: *const i8 = std::ptr::null();
+
+        try!(unsafe {
+            ::error::result_from_libyh(lyh::yh_type_to_string(self.into(), &mut ptr))
+                .map_err(|_| std::fmt::Error)
+        });
+
+        let cstr = try!(unsafe {
+            std::ffi::CStr::from_ptr(ptr)
+                .to_str()
+                .map_err(|_| std::fmt::Error)
+        });
+
+        write!(f, "{}", cstr)
+    }
+}
+
 impl<'a> From<&'a yh_object_descriptor> for ObjectHandle {
     fn from(descriptor: &'a yh_object_descriptor) -> Self {
         ObjectHandle {
