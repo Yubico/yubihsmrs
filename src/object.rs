@@ -551,6 +551,29 @@ impl ObjectDomain {
     }
 }
 
+impl std::fmt::Display for ObjectDomain {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ObjectDomain::One => write!(f, "One"),
+            ObjectDomain::Two => write!(f, "Two"),
+            ObjectDomain::Three => write!(f, "Three"),
+            ObjectDomain::Four => write!(f, "Four"),
+            ObjectDomain::Five => write!(f, "Five"),
+            ObjectDomain::Six => write!(f, "Six"),
+            ObjectDomain::Seven => write!(f, "Seven"),
+            ObjectDomain::Eight => write!(f, "Eight"),
+            ObjectDomain::Nine => write!(f, "Nine"),
+            ObjectDomain::Ten => write!(f, "Ten"),
+            ObjectDomain::Eleven => write!(f, "Eleven"),
+            ObjectDomain::Twelve => write!(f, "Twelve"),
+            ObjectDomain::Thirteen => write!(f, "Thirteen"),
+            ObjectDomain::Fourteen => write!(f, "Fourteen"),
+            ObjectDomain::Fifteen => write!(f, "Fifteen"),
+            ObjectDomain::Sixteen => write!(f, "Sixteen"),
+        }
+    }
+}
+
 impl From<yh_object_type> for ObjectType {
     fn from(object_type: yh_object_type) -> Self {
         match object_type {
