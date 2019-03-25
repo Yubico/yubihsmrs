@@ -569,23 +569,13 @@ impl From<yh_object_type> for ObjectType {
 
 impl<'a> From<&'a yh_object_type> for ObjectType {
     fn from(object_type: &'a yh_object_type) -> Self {
-        match *object_type {
-            yh_object_type::YH_ANY => unreachable!(),
-            yh_object_type::YH_OPAQUE => ObjectType::Opaque,
-            yh_object_type::YH_AUTHENTICATION_KEY => ObjectType::AuthenticationKey,
-            yh_object_type::YH_ASYMMETRIC_KEY => ObjectType::AsymmetricKey,
-            yh_object_type::YH_WRAP_KEY => ObjectType::WrapKey,
-            yh_object_type::YH_HMAC_KEY => ObjectType::HmacKey,
-            yh_object_type::YH_TEMPLATE => ObjectType::Template,
-            yh_object_type::YH_OTP_AEAD_KEY => ObjectType::OtpAeadKey,
-            yh_object_type::YH_PUBLIC_KEY => ObjectType::PublicKey,
-        }
+        (*object_type).into()
     }
 }
 
-impl<'a> From<&'a yh_algorithm> for ObjectAlgorithm {
-    fn from(algorithm: &'a yh_algorithm) -> ObjectAlgorithm {
-        match *algorithm {
+impl From<yh_algorithm> for ObjectAlgorithm {
+    fn from(algorithm: yh_algorithm) -> ObjectAlgorithm {
+        match algorithm {
             yh_algorithm::YH_ALGO_ANY => unreachable!(),
             yh_algorithm::YH_ALGO_RSA_PKCS1_SHA1 => ObjectAlgorithm::RsaPkcs1Sha1,
             yh_algorithm::YH_ALGO_RSA_PKCS1_SHA256 => ObjectAlgorithm::RsaPkcs1Sha256,
@@ -637,6 +627,95 @@ impl<'a> From<&'a yh_algorithm> for ObjectAlgorithm {
             yh_algorithm::YH_ALGO_EC_ED25519 => ObjectAlgorithm::Ed25519,
             yh_algorithm::YH_ALGO_EC_P224 => ObjectAlgorithm::EcP224,
         }
+    }
+}
+
+impl<'a> From<&'a yh_algorithm> for ObjectAlgorithm {
+    fn from(algorithm: &'a yh_algorithm) -> ObjectAlgorithm {
+        (*algorithm).into()
+    }
+}
+
+impl From<ObjectAlgorithm> for yh_algorithm {
+    fn from(algorithm: ObjectAlgorithm) -> yh_algorithm {
+        match algorithm {
+            ObjectAlgorithm::RsaPkcs1Sha1 => yh_algorithm::YH_ALGO_RSA_PKCS1_SHA1,
+            ObjectAlgorithm::RsaPkcs1Sha256 => yh_algorithm::YH_ALGO_RSA_PKCS1_SHA256,
+            ObjectAlgorithm::RsaPkcs1Sha384 => yh_algorithm::YH_ALGO_RSA_PKCS1_SHA384,
+            ObjectAlgorithm::RsaPkcs1Sha512 => yh_algorithm::YH_ALGO_RSA_PKCS1_SHA512,
+            ObjectAlgorithm::RsaPssSha1 => yh_algorithm::YH_ALGO_RSA_PSS_SHA1,
+            ObjectAlgorithm::RsaPssSha256 => yh_algorithm::YH_ALGO_RSA_PSS_SHA256,
+            ObjectAlgorithm::RsaPssSha384 => yh_algorithm::YH_ALGO_RSA_PSS_SHA384,
+            ObjectAlgorithm::RsaPssSha512 => yh_algorithm::YH_ALGO_RSA_PSS_SHA512,
+            ObjectAlgorithm::Rsa2048 => yh_algorithm::YH_ALGO_RSA_2048,
+            ObjectAlgorithm::Rsa3072 => yh_algorithm::YH_ALGO_RSA_3072,
+            ObjectAlgorithm::Rsa4096 => yh_algorithm::YH_ALGO_RSA_4096,
+            ObjectAlgorithm::EcP256 => yh_algorithm::YH_ALGO_EC_P256,
+            ObjectAlgorithm::EcP384 => yh_algorithm::YH_ALGO_EC_P384,
+            ObjectAlgorithm::EcP521 => yh_algorithm::YH_ALGO_EC_P521,
+            ObjectAlgorithm::EcK256 => yh_algorithm::YH_ALGO_EC_K256,
+            ObjectAlgorithm::EcBp256 => yh_algorithm::YH_ALGO_EC_BP256,
+            ObjectAlgorithm::EcBp384 => yh_algorithm::YH_ALGO_EC_BP384,
+            ObjectAlgorithm::EcBp512 => yh_algorithm::YH_ALGO_EC_BP512,
+            ObjectAlgorithm::HmacSha1 => yh_algorithm::YH_ALGO_HMAC_SHA1,
+            ObjectAlgorithm::HmacSha256 => yh_algorithm::YH_ALGO_HMAC_SHA256,
+            ObjectAlgorithm::HmacSha384 => yh_algorithm::YH_ALGO_HMAC_SHA384,
+            ObjectAlgorithm::HmacSha512 => yh_algorithm::YH_ALGO_HMAC_SHA512,
+            ObjectAlgorithm::EcdsaSha1 => yh_algorithm::YH_ALGO_EC_ECDSA_SHA1,
+            ObjectAlgorithm::Ecdh => yh_algorithm::YH_ALGO_EC_ECDH,
+            ObjectAlgorithm::RsaOaepSha1 => yh_algorithm::YH_ALGO_RSA_OAEP_SHA1,
+            ObjectAlgorithm::RsaOaepSha256 => yh_algorithm::YH_ALGO_RSA_OAEP_SHA256,
+            ObjectAlgorithm::RsaOaepSha384 => yh_algorithm::YH_ALGO_RSA_OAEP_SHA384,
+            ObjectAlgorithm::RsaOaepSha512 => yh_algorithm::YH_ALGO_RSA_OAEP_SHA512,
+            ObjectAlgorithm::Aes128CcmWrap => yh_algorithm::YH_ALGO_AES128_CCM_WRAP,
+            ObjectAlgorithm::OpaqueData => yh_algorithm::YH_ALGO_OPAQUE_DATA,
+            ObjectAlgorithm::OpaqueX509Certificate => yh_algorithm::YH_ALGO_OPAQUE_X509_CERTIFICATE,
+            ObjectAlgorithm::Mgf1Sha1 => yh_algorithm::YH_ALGO_MGF1_SHA1,
+            ObjectAlgorithm::Mgf1Sha256 => yh_algorithm::YH_ALGO_MGF1_SHA256,
+            ObjectAlgorithm::Mgf1Sha384 => yh_algorithm::YH_ALGO_MGF1_SHA384,
+            ObjectAlgorithm::Mgf1Sha512 => yh_algorithm::YH_ALGO_MGF1_SHA512,
+            ObjectAlgorithm::TemplateSsh => yh_algorithm::YH_ALGO_TEMPLATE_SSH,
+            ObjectAlgorithm::Aes128YubicoOtp => yh_algorithm::YH_ALGO_AES128_YUBICO_OTP,
+            ObjectAlgorithm::Aes128YubicoAuthentication => {
+                yh_algorithm::YH_ALGO_AES128_YUBICO_AUTHENTICATION
+            }
+            ObjectAlgorithm::Aes192YubicoOtp => yh_algorithm::YH_ALGO_AES192_YUBICO_OTP,
+            ObjectAlgorithm::Aes256YubicoOtp => yh_algorithm::YH_ALGO_AES256_YUBICO_OTP,
+            ObjectAlgorithm::Aes192CcmWrap => yh_algorithm::YH_ALGO_AES192_CCM_WRAP,
+            ObjectAlgorithm::Aes256CcmWrap => yh_algorithm::YH_ALGO_AES256_CCM_WRAP,
+            ObjectAlgorithm::EcdsaSha256 => yh_algorithm::YH_ALGO_EC_ECDSA_SHA256,
+            ObjectAlgorithm::EcdsaSha384 => yh_algorithm::YH_ALGO_EC_ECDSA_SHA384,
+            ObjectAlgorithm::EcdsaSha512 => yh_algorithm::YH_ALGO_EC_ECDSA_SHA512,
+            ObjectAlgorithm::Ed25519 => yh_algorithm::YH_ALGO_EC_ED25519,
+            ObjectAlgorithm::EcP224 => yh_algorithm::YH_ALGO_EC_P224,
+        }
+    }
+}
+
+impl<'a> From<&'a ObjectAlgorithm> for yh_algorithm {
+    fn from(algorithm: &'a ObjectAlgorithm) -> yh_algorithm {
+        (*algorithm).into()
+    }
+}
+
+impl std::fmt::Display for ObjectAlgorithm {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut ptr: *const i8 = std::ptr::null();
+
+        let a: yh_algorithm = self.into();
+
+        try!(unsafe {
+            ::error::result_from_libyh(lyh::yh_algo_to_string(a, &mut ptr))
+                .map_err(|_| std::fmt::Error)
+        });
+
+        let cstr = try!(unsafe {
+            std::ffi::CStr::from_ptr(ptr)
+                .to_str()
+                .map_err(|_| std::fmt::Error)
+        });
+
+        write!(f, "{}", cstr)
     }
 }
 
@@ -695,16 +774,7 @@ impl From<ObjectType> for yh_object_type {
 
 impl<'a> From<&'a ObjectType> for yh_object_type {
     fn from(object_type: &'a ObjectType) -> Self {
-        match *object_type {
-            ObjectType::Opaque => yh_object_type::YH_OPAQUE,
-            ObjectType::AuthenticationKey => yh_object_type::YH_AUTHENTICATION_KEY,
-            ObjectType::AsymmetricKey => yh_object_type::YH_ASYMMETRIC_KEY,
-            ObjectType::WrapKey => yh_object_type::YH_WRAP_KEY,
-            ObjectType::HmacKey => yh_object_type::YH_HMAC_KEY,
-            ObjectType::Template => yh_object_type::YH_TEMPLATE,
-            ObjectType::OtpAeadKey => yh_object_type::YH_OTP_AEAD_KEY,
-            ObjectType::PublicKey => yh_object_type::YH_PUBLIC_KEY,
-        }
+        (*object_type).into()
     }
 }
 
@@ -829,62 +899,6 @@ impl From<ObjectDomain> for u16 {
             ObjectDomain::Fourteen => 1 << 13,
             ObjectDomain::Fifteen => 1 << 14,
             ObjectDomain::Sixteen => 1 << 15,
-        }
-    }
-}
-
-impl From<ObjectAlgorithm> for yh_algorithm {
-    fn from(algorithm: ObjectAlgorithm) -> Self {
-        match algorithm {
-            ObjectAlgorithm::RsaPkcs1Sha1 => yh_algorithm::YH_ALGO_RSA_PKCS1_SHA1,
-            ObjectAlgorithm::RsaPkcs1Sha256 => yh_algorithm::YH_ALGO_RSA_PKCS1_SHA256,
-            ObjectAlgorithm::RsaPkcs1Sha384 => yh_algorithm::YH_ALGO_RSA_PKCS1_SHA384,
-            ObjectAlgorithm::RsaPkcs1Sha512 => yh_algorithm::YH_ALGO_RSA_PKCS1_SHA512,
-            ObjectAlgorithm::RsaPssSha1 => yh_algorithm::YH_ALGO_RSA_PSS_SHA1,
-            ObjectAlgorithm::RsaPssSha256 => yh_algorithm::YH_ALGO_RSA_PSS_SHA256,
-            ObjectAlgorithm::RsaPssSha384 => yh_algorithm::YH_ALGO_RSA_PSS_SHA384,
-            ObjectAlgorithm::RsaPssSha512 => yh_algorithm::YH_ALGO_RSA_PSS_SHA512,
-            ObjectAlgorithm::Rsa2048 => yh_algorithm::YH_ALGO_RSA_2048,
-            ObjectAlgorithm::Rsa3072 => yh_algorithm::YH_ALGO_RSA_3072,
-            ObjectAlgorithm::Rsa4096 => yh_algorithm::YH_ALGO_RSA_4096,
-            ObjectAlgorithm::EcP256 => yh_algorithm::YH_ALGO_EC_P256,
-            ObjectAlgorithm::EcP384 => yh_algorithm::YH_ALGO_EC_P384,
-            ObjectAlgorithm::EcP521 => yh_algorithm::YH_ALGO_EC_P521,
-            ObjectAlgorithm::EcK256 => yh_algorithm::YH_ALGO_EC_K256,
-            ObjectAlgorithm::EcBp256 => yh_algorithm::YH_ALGO_EC_BP256,
-            ObjectAlgorithm::EcBp384 => yh_algorithm::YH_ALGO_EC_BP384,
-            ObjectAlgorithm::EcBp512 => yh_algorithm::YH_ALGO_EC_BP512,
-            ObjectAlgorithm::HmacSha1 => yh_algorithm::YH_ALGO_HMAC_SHA1,
-            ObjectAlgorithm::HmacSha256 => yh_algorithm::YH_ALGO_HMAC_SHA256,
-            ObjectAlgorithm::HmacSha384 => yh_algorithm::YH_ALGO_HMAC_SHA384,
-            ObjectAlgorithm::HmacSha512 => yh_algorithm::YH_ALGO_HMAC_SHA512,
-            ObjectAlgorithm::EcdsaSha1 => yh_algorithm::YH_ALGO_EC_ECDSA_SHA1,
-            ObjectAlgorithm::Ecdh => yh_algorithm::YH_ALGO_EC_ECDH,
-            ObjectAlgorithm::RsaOaepSha1 => yh_algorithm::YH_ALGO_RSA_OAEP_SHA1,
-            ObjectAlgorithm::RsaOaepSha256 => yh_algorithm::YH_ALGO_RSA_OAEP_SHA256,
-            ObjectAlgorithm::RsaOaepSha384 => yh_algorithm::YH_ALGO_RSA_OAEP_SHA384,
-            ObjectAlgorithm::RsaOaepSha512 => yh_algorithm::YH_ALGO_RSA_OAEP_SHA512,
-            ObjectAlgorithm::Aes128CcmWrap => yh_algorithm::YH_ALGO_AES128_CCM_WRAP,
-            ObjectAlgorithm::OpaqueData => yh_algorithm::YH_ALGO_OPAQUE_DATA,
-            ObjectAlgorithm::OpaqueX509Certificate => yh_algorithm::YH_ALGO_OPAQUE_X509_CERTIFICATE,
-            ObjectAlgorithm::Mgf1Sha1 => yh_algorithm::YH_ALGO_MGF1_SHA1,
-            ObjectAlgorithm::Mgf1Sha256 => yh_algorithm::YH_ALGO_MGF1_SHA256,
-            ObjectAlgorithm::Mgf1Sha384 => yh_algorithm::YH_ALGO_MGF1_SHA384,
-            ObjectAlgorithm::Mgf1Sha512 => yh_algorithm::YH_ALGO_MGF1_SHA512,
-            ObjectAlgorithm::TemplateSsh => yh_algorithm::YH_ALGO_TEMPLATE_SSH,
-            ObjectAlgorithm::Aes128YubicoOtp => yh_algorithm::YH_ALGO_AES128_YUBICO_OTP,
-            ObjectAlgorithm::Aes128YubicoAuthentication => {
-                yh_algorithm::YH_ALGO_AES128_YUBICO_AUTHENTICATION
-            }
-            ObjectAlgorithm::Aes192YubicoOtp => yh_algorithm::YH_ALGO_AES192_YUBICO_OTP,
-            ObjectAlgorithm::Aes256YubicoOtp => yh_algorithm::YH_ALGO_AES256_YUBICO_OTP,
-            ObjectAlgorithm::Aes192CcmWrap => yh_algorithm::YH_ALGO_AES192_CCM_WRAP,
-            ObjectAlgorithm::Aes256CcmWrap => yh_algorithm::YH_ALGO_AES256_CCM_WRAP,
-            ObjectAlgorithm::EcdsaSha256 => yh_algorithm::YH_ALGO_EC_ECDSA_SHA256,
-            ObjectAlgorithm::EcdsaSha384 => yh_algorithm::YH_ALGO_EC_ECDSA_SHA384,
-            ObjectAlgorithm::EcdsaSha512 => yh_algorithm::YH_ALGO_EC_ECDSA_SHA512,
-            ObjectAlgorithm::Ed25519 => yh_algorithm::YH_ALGO_EC_ED25519,
-            ObjectAlgorithm::EcP224 => yh_algorithm::YH_ALGO_EC_P224,
         }
     }
 }
