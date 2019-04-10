@@ -547,9 +547,8 @@ mod test {
 
     extern crate base64;
 
-    const ENV_VAR: &str = "YUBIHSM_DIRECT_USB";
+    const ENV_VAR: &str = "YUBIHSM_CONNECTOR_URL";
     const CONNECTOR_URL: &str = "http://127.0.0.1:12345";
-    const DIRECT_USB_URL: &str = r"yhusb://";
     const PASSWORD: &str = "password";
     const WRAPKEY: [u8; 32] = [
         0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e,
@@ -575,10 +574,13 @@ mod test {
 
     macro_rules! create_hsm {
         () => {
-            if env::var(ENV_VAR).is_err() {
-                YubiHsm::new(CONNECTOR_URL).expect("Unable to create HSM with connector")
+            if let Ok(url) = env::var(ENV_VAR) {
+                YubiHsm::new(&url).expect(&format!("Unable to create HSM with connector {}", url))
             } else {
-                YubiHsm::new(DIRECT_USB_URL).expect("Unable to create HSM with direct USB")
+                YubiHsm::new(CONNECTOR_URL).expect(&format!(
+                    "Unable to create HSM with connector {}",
+                    CONNECTOR_URL
+                ))
             }
         };
     }
