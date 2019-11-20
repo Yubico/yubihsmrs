@@ -36,26 +36,24 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref MODHEX_MAP: HashMap<char, char> = {
-        let mut m = HashMap::new();
-        m.insert('c', '0');
-        m.insert('b', '1');
-        m.insert('d', '2');
-        m.insert('e', '3');
-        m.insert('f', '4');
-        m.insert('g', '5');
-        m.insert('h', '6');
-        m.insert('i', '7');
-        m.insert('j', '8');
-        m.insert('k', '9');
-        m.insert('l', 'a');
-        m.insert('n', 'b');
-        m.insert('r', 'c');
-        m.insert('t', 'd');
-        m.insert('u', 'e');
-        m.insert('v', 'f');
-        m
-    };
+    static ref MODHEX_MAP: HashMap<char, char> =
+    [('c', '0'),
+     ('b', '1'),
+     ('d', '2'),
+     ('e', '3'),
+     ('f', '4'),
+     ('g', '5'),
+     ('h', '6'),
+     ('i', '7'),
+     ('j', '8'),
+     ('k', '9'),
+     ('l', 'a'),
+     ('n', 'b'),
+     ('r', 'c'),
+     ('t', 'd'),
+     ('u', 'e'),
+     ('v', 'f')]
+     .iter().cloned().collect();
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -68,10 +66,7 @@ pub struct Otp<'r> {
 }
 
 fn to_bytes(otp: &str) -> [u8; 16] {
-    let mut s = String::new();
-    for c in otp.chars() {
-        s.push(*MODHEX_MAP.get(&c).unwrap());
-    }
+    let s: String = otp.chars().map(|c| MODHEX_MAP.get(&c).unwrap()).collect();
 
     let mut ret = [0; 16];
     ret.clone_from_slice(&s.from_hex().unwrap());
@@ -80,13 +75,7 @@ fn to_bytes(otp: &str) -> [u8; 16] {
 
 /// Check whether or not a string is valid ModHex
 pub fn is_modhex(otp: &str) -> bool {
-    for c in otp.chars() {
-        if MODHEX_MAP.get(&c).is_none() {
-            return false;
-        }
-    }
-
-    true
+    otp.chars().all(|c| MODHEX_MAP.contains_key(&c))
 }
 
 impl<'r> Otp<'r> {

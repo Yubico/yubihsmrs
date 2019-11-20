@@ -328,61 +328,59 @@ pub struct ObjectHandle {
 }
 
 lazy_static! {
-    static ref CAPABILITIES_MAP: HashMap<(u8, u8), ObjectCapability> = {
-        let mut m = HashMap::new();
-        m.insert((0, 0x01), ObjectCapability::GetOpaque);
-        m.insert((0, 0x02), ObjectCapability::PutOpaque);
-        m.insert((0, 0x04), ObjectCapability::PutAuthenticationKey);
-        m.insert((0, 0x08), ObjectCapability::PutAsymmetricKey);
-        m.insert((0, 0x10), ObjectCapability::GenerateAsymmetricKey);
-        m.insert((0, 0x20), ObjectCapability::SignPkcs);
-        m.insert((0, 0x40), ObjectCapability::SignPss);
-        m.insert((0, 0x80), ObjectCapability::SignEcdsa);
+    static ref CAPABILITIES_MAP: HashMap<(u8, u8), ObjectCapability> =
+        [((0, 0x01), ObjectCapability::GetOpaque),
+         ((0, 0x02), ObjectCapability::PutOpaque),
+         ((0, 0x04), ObjectCapability::PutAuthenticationKey),
+         ((0, 0x08), ObjectCapability::PutAsymmetricKey),
+         ((0, 0x10), ObjectCapability::GenerateAsymmetricKey),
+         ((0, 0x20), ObjectCapability::SignPkcs),
+         ((0, 0x40), ObjectCapability::SignPss),
+         ((0, 0x80), ObjectCapability::SignEcdsa),
 
-        m.insert((1, 0x01), ObjectCapability::SignEddsa);
-        m.insert((1, 0x02), ObjectCapability::DecryptPkcs);
-        m.insert((1, 0x04), ObjectCapability::DecryptOaep);
-        m.insert((1, 0x08), ObjectCapability::DeriveEcdh);
-        m.insert((1, 0x10), ObjectCapability::ExportWrapped);
-        m.insert((1, 0x20), ObjectCapability::ImportWrapped);
-        m.insert((1, 0x40), ObjectCapability::PutWrapKey);
-        m.insert((1, 0x80), ObjectCapability::GenerateWrapKey);
+         ((1, 0x01), ObjectCapability::SignEddsa),
+         ((1, 0x02), ObjectCapability::DecryptPkcs),
+         ((1, 0x04), ObjectCapability::DecryptOaep),
+         ((1, 0x08), ObjectCapability::DeriveEcdh),
+         ((1, 0x10), ObjectCapability::ExportWrapped),
+         ((1, 0x20), ObjectCapability::ImportWrapped),
+         ((1, 0x40), ObjectCapability::PutWrapKey),
+         ((1, 0x80), ObjectCapability::GenerateWrapKey),
 
-        m.insert((2, 0x01), ObjectCapability::ExportableUnderWrap);
-        m.insert((2, 0x02), ObjectCapability::SetOption);
-        m.insert((2, 0x04), ObjectCapability::GetOption);
-        m.insert((2, 0x08), ObjectCapability::GetPseudoRandom);
-        m.insert((2, 0x10), ObjectCapability::PutHmacKey);
-        m.insert((2, 0x20), ObjectCapability::GenerateHmacKey);
-        m.insert((2, 0x40), ObjectCapability::SignHmac);
-        m.insert((2, 0x80), ObjectCapability::VerifyHmac);
+         ((2, 0x01), ObjectCapability::ExportableUnderWrap),
+         ((2, 0x02), ObjectCapability::SetOption),
+         ((2, 0x04), ObjectCapability::GetOption),
+         ((2, 0x08), ObjectCapability::GetPseudoRandom),
+         ((2, 0x10), ObjectCapability::PutHmacKey),
+         ((2, 0x20), ObjectCapability::GenerateHmacKey),
+         ((2, 0x40), ObjectCapability::SignHmac),
+         ((2, 0x80), ObjectCapability::VerifyHmac),
 
-        m.insert((3, 0x01), ObjectCapability::GetLogEntries);
-        m.insert((3, 0x02), ObjectCapability::SignSshCertificate);
-        m.insert((3, 0x04), ObjectCapability::GetTemplate);
-        m.insert((3, 0x08), ObjectCapability::PutTemplate);
-        m.insert((3, 0x10), ObjectCapability::ResetDevice);
-        m.insert((3, 0x20), ObjectCapability::DecryptOtp);
-        m.insert((3, 0x40), ObjectCapability::CreateOtpAead);
-        m.insert((3, 0x80), ObjectCapability::RandomizeOtpAead);
+         ((3, 0x01), ObjectCapability::GetLogEntries),
+         ((3, 0x02), ObjectCapability::SignSshCertificate),
+         ((3, 0x04), ObjectCapability::GetTemplate),
+         ((3, 0x08), ObjectCapability::PutTemplate),
+         ((3, 0x10), ObjectCapability::ResetDevice),
+         ((3, 0x20), ObjectCapability::DecryptOtp),
+         ((3, 0x40), ObjectCapability::CreateOtpAead),
+         ((3, 0x80), ObjectCapability::RandomizeOtpAead),
 
-        m.insert((4, 0x01), ObjectCapability::RewrapFromOtpAeadKey);
-        m.insert((4, 0x02), ObjectCapability::RewrapToOtpAeadKey);
-        m.insert((4, 0x04), ObjectCapability::SignAttestationCertificate);
-        m.insert((4, 0x08), ObjectCapability::PutOtpAeadKey);
-        m.insert((4, 0x10), ObjectCapability::GenerateOtpAeadKey);
-        m.insert((4, 0x20), ObjectCapability::WrapData);
-        m.insert((4, 0x40), ObjectCapability::UnwrapData);
-        m.insert((4, 0x80), ObjectCapability::DeleteOpaque);
+         ((4, 0x01), ObjectCapability::RewrapFromOtpAeadKey),
+         ((4, 0x02), ObjectCapability::RewrapToOtpAeadKey),
+         ((4, 0x04), ObjectCapability::SignAttestationCertificate),
+         ((4, 0x08), ObjectCapability::PutOtpAeadKey),
+         ((4, 0x10), ObjectCapability::GenerateOtpAeadKey),
+         ((4, 0x20), ObjectCapability::WrapData),
+         ((4, 0x40), ObjectCapability::UnwrapData),
+         ((4, 0x80), ObjectCapability::DeleteOpaque),
 
-        m.insert((5, 0x01), ObjectCapability::DeleteAuthenticationKey);
-        m.insert((5, 0x02), ObjectCapability::DeleteAsymmetricKey);
-        m.insert((5, 0x04), ObjectCapability::DeleteWrapKey);
-        m.insert((5, 0x08), ObjectCapability::DeleteHmacKey);
-        m.insert((5, 0x10), ObjectCapability::DeleteTemplate);
-        m.insert((5, 0x20), ObjectCapability::DeleteOtpAeadKey);
-        m
-    };
+         ((5, 0x01), ObjectCapability::DeleteAuthenticationKey),
+         ((5, 0x02), ObjectCapability::DeleteAsymmetricKey),
+         ((5, 0x04), ObjectCapability::DeleteWrapKey),
+         ((5, 0x08), ObjectCapability::DeleteHmacKey),
+         ((5, 0x10), ObjectCapability::DeleteTemplate),
+         ((5, 0x20), ObjectCapability::DeleteOtpAeadKey)]
+         .iter().cloned().collect();
 }
 
 impl ObjectCapability {
@@ -391,10 +389,9 @@ impl ObjectCapability {
 
         for i in 0..capabilities.capabilities.len() {
             for j in 0..8 {
-                let x = CAPABILITIES_MAP
-                    .get(&(i as u8, capabilities.capabilities[7 - i] & (1 << j) as u8));
-                if x.is_some() {
-                    v.push(*x.unwrap());
+                if let Some(x) = CAPABILITIES_MAP
+                    .get(&(i as u8, capabilities.capabilities[7 - i] & (1 << j) as u8)) {
+                    v.push(*x);
                 }
             }
         }
