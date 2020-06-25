@@ -143,7 +143,7 @@ pub enum Error {
     /// Wrong length
     DeviceWrongLength,
 
-    /// Wrong premissions for operation
+    /// Wrong permissions for operation
     DeviceInvalidPermissions,
 
     /// Log buffer is full and forced audit is set
@@ -230,7 +230,7 @@ fn code_to_str(return_code: Error) -> &'static str {
         Error::DeviceSessionFailed => "Session creation failed",
         Error::DeviceStorageFailed => "Storage failure",
         Error::DeviceWrongLength => "Wrong length",
-        Error::DeviceInvalidPermissions => "Wrong premissions for operation",
+        Error::DeviceInvalidPermissions => "Wrong permissions for operation",
         Error::DeviceLogFull => "Log buffer is full and forced audit is set",
         Error::DeviceObjectNotFound => "Object not found",
         Error::DeviceIdIllegal => "Illegal ID used",
