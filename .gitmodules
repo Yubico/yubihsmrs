@@ -1,3 +1,4 @@
 [submodule "yubihsm"]
 	path = libyubihsm-sys/yubihsm
 	url = https://github.com/Yubico/yubihsm-shell.git
+	branch = master
