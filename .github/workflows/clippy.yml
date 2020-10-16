@@ -1,0 +1,45 @@
+name: "Linux build check"
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # At 20:02 on Sunday
+    - cron: '2 20 * * 0'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        # We must fetch at least the immediate parents so that if this is
+        # a pull request then we can checkout the head.
+        fetch-depth: 2
+        # This project uses submodules
+        submodules: recursive
+
+    # If this run was triggered by a pull request event, then checkout
+    # the head of the pull request instead of the merge commit.
+    - run: git checkout HEAD^2
+      if: ${{ github.event_name == 'pull_request' }}
+
+    - name: Dependencies
+      run: |
+        sudo apt -q update
+        sudo apt install -q -y libcurl4-openssl-dev libedit-dev libssl-dev \
+          libusb-1.0-0-dev pkg-config libpcsclite-dev gengetopt help2man
+
+    # The buildlib feature uses the submodule of yubihsm-shell@master and
+    # builds a libyubihsm-sys crate
+    #
+    - name: Build project with buildlib
+      run: |
+        # When the warnings are fixed, add " -- -D warnings" to below
+        cargo clippy --features buildlib
