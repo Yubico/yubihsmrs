@@ -903,6 +903,7 @@ fn bindgen_test_layout_yh_cap() {
 
 extern "C" {
     #[link_name = "yh_capability"]
+    /// Object capabilities
     pub static mut yh_capability: [yh_cap; 47usize];
 }
 
@@ -954,6 +955,7 @@ fn bindgen_test_layout_yh_algo() {
 
 extern "C" {
     #[link_name = "yh_algorithms"]
+    /// Object and function algorithm
     pub static mut yh_algorithms: [yh_algo; 46usize];
 }
 
@@ -1005,6 +1007,7 @@ fn bindgen_test_layout_yh_ot() {
 
 extern "C" {
     #[link_name = "yh_types"]
+    /// Object type
     pub static mut yh_types: [yh_ot; 7usize];
 }
 
@@ -1056,6 +1059,7 @@ fn bindgen_test_layout_yh_opt() {
 
 extern "C" {
     #[link_name = "yh_options"]
+    /// Device global setting
     pub static mut yh_options: [yh_opt; 2usize];
 }
 
