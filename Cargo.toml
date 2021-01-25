@@ -16,7 +16,7 @@
 
 [package]
 name = "yubihsmrs"
-version = "2.1.0"
+version = "2.1.1"
 authors = ["Alessio Di Mauro <alessio@yubico.com>"]
 description = "Rust wrapper library for libyubihsm"
 keywords = ["yubico", "hsm", "ffi"]
