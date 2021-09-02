@@ -720,7 +720,7 @@ impl<'a> From<&'a ObjectAlgorithm> for yh_algorithm {
 
 impl std::fmt::Display for ObjectAlgorithm {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let mut ptr: *const i8 = std::ptr::null();
+        let mut ptr: *const std::os::raw::c_char = std::ptr::null();
 
         let a: yh_algorithm = self.into();
 
@@ -800,7 +800,7 @@ impl<'a> From<&'a ObjectType> for yh_object_type {
 
 impl std::fmt::Display for ObjectType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let mut ptr: *const i8 = std::ptr::null();
+        let mut ptr: *const std::os::raw::c_char = std::ptr::null();
 
         try!(unsafe {
             ::error::result_from_libyh(lyh::yh_type_to_string(self.into(), &mut ptr))
