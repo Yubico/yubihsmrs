@@ -499,6 +499,8 @@ pub enum yh_algorithm {
     YH_ALGO_EC_ED25519 = 46,
     /// SEC-P224 curve
     YH_ALGO_EC_P224 = 47,
+    /// RSA PKCS1v1.5 decrypt
+    YH_ALGO_RSA_PKCS1_DECRYPT = 48,
 }
 
 impl Default for yh_algorithm {

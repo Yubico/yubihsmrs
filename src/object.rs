@@ -278,6 +278,8 @@ pub enum ObjectAlgorithm {
     Ed25519,
     /// SEC-P224 curve
     EcP224,
+    /// RSA PKCS1v1.5 decrypt
+    RsaPkcs1Decrypt,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -646,6 +648,7 @@ impl From<yh_algorithm> for ObjectAlgorithm {
             yh_algorithm::YH_ALGO_EC_ECDSA_SHA512 => ObjectAlgorithm::EcdsaSha512,
             yh_algorithm::YH_ALGO_EC_ED25519 => ObjectAlgorithm::Ed25519,
             yh_algorithm::YH_ALGO_EC_P224 => ObjectAlgorithm::EcP224,
+            yh_algorithm::YH_ALGO_RSA_PKCS1_DECRYPT => ObjectAlgorithm::RsaPkcs1Decrypt,
         }
     }
 }
@@ -708,6 +711,7 @@ impl From<ObjectAlgorithm> for yh_algorithm {
             ObjectAlgorithm::EcdsaSha512 => yh_algorithm::YH_ALGO_EC_ECDSA_SHA512,
             ObjectAlgorithm::Ed25519 => yh_algorithm::YH_ALGO_EC_ED25519,
             ObjectAlgorithm::EcP224 => yh_algorithm::YH_ALGO_EC_P224,
+            ObjectAlgorithm::RsaPkcs1Decrypt => yh_algorithm::YH_ALGO_RSA_PKCS1_DECRYPT,
         }
     }
 }
