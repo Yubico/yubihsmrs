@@ -28,6 +28,9 @@
 //! Rust library for the YubiHSM 2
 
 extern crate libyubihsm_sys as lyh;
+extern crate num_enum;
+
+use lyh::{yh_algorithm_enum, yh_capabilities, yh_object_descriptor, yh_rc_enum};
 
 #[macro_use]
 extern crate lazy_static;
@@ -38,7 +41,7 @@ extern crate log;
 extern crate regex;
 extern crate rustc_serialize;
 
-use lyh::{yh_connector, yh_rc, yh_session};
+use lyh::{yh_connector, yh_session};
 
 mod error;
 use error::Error;
@@ -68,19 +71,19 @@ pub struct Session {
 /// Device information
 pub struct DeviceInfo {
     /// Major version
-    major: u8,
+    pub major: u8,
     /// Minor version
-    minor: u8,
+    pub minor: u8,
     /// Patch version
-    patch: u8,
+    pub patch: u8,
     /// Serial number
-    serial: u32,
+    pub serial: u32,
     /// Available log entries
-    log_total: u8,
+    pub log_total: u8,
     /// Used log entries
-    log_used: u8,
+    pub log_used: u8,
     /// Supported algorihms
-    algorithms: Vec<lyh::yh_algorithm>,
+    pub algorithms: Vec<yh_algorithm_enum>,
 }
 
 /// Initialize libyubihsm
@@ -99,11 +102,11 @@ impl YubiHsm {
     /// Create a YubiHSM object using a given connector URL
     pub fn new(url: &str) -> Result<Self, Error> {
         let connector_ptr: *mut yh_connector = ::std::ptr::null_mut();
-        let c_url = ::std::ffi::CString::new(url).unwrap();
+        let c_url = ::std::ffi::CString::new(url)?;
 
-        try!(error::result_from_libyh(unsafe {
+        error::result_from_libyh(unsafe {
             lyh::yh_init_connector(c_url.as_ptr(), &connector_ptr)
-        }));
+        })?;
 
         error::result_from_libyh(unsafe { lyh::yh_connect(connector_ptr) }).and(Ok(YubiHsm {
             connector: connector_ptr,
@@ -119,7 +122,7 @@ impl YubiHsm {
     ) -> Result<Session, Error> {
         let session_ptr: *mut yh_session = ::std::ptr::null_mut();
 
-        try!(error::result_from_libyh(unsafe {
+        error::result_from_libyh(unsafe {
             lyh::yh_create_session_derived(
                 self.connector,
                 key_id,
@@ -131,7 +134,7 @@ impl YubiHsm {
         })
         .and(error::result_from_libyh(unsafe {
             lyh::yh_authenticate_session(session_ptr)
-        })));
+        }))?;
 
         Ok(Session { ptr: session_ptr })
     }
@@ -146,7 +149,7 @@ impl YubiHsm {
         let mut log_total = 0;
         let mut log_used = 0;
         let mut algorithms =
-            [lyh::yh_algorithm::YH_ALGO_RSA_PKCS1_SHA1; lyh::YH_MAX_ALGORITHM_COUNT];
+            [0; lyh::YH_MAX_ALGORITHM_COUNT];
         let mut n_algorithms = lyh::YH_MAX_ALGORITHM_COUNT;
 
         unsafe {
@@ -163,7 +166,7 @@ impl YubiHsm {
             );
         }
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(DeviceInfo {
             major,
@@ -172,7 +175,7 @@ impl YubiHsm {
             serial,
             log_total,
             log_used,
-            algorithms: algorithms[0..n_algorithms].to_vec(),
+            algorithms: algorithms[0..n_algorithms].iter().map(|v| yh_algorithm_enum::from(*v)).collect(),
         })
     }
 
@@ -194,12 +197,11 @@ impl YubiHsm {
 impl Drop for YubiHsm {
     fn drop(&mut self) {
         trace!("Dropping hsm");
-        self.disconnect().unwrap_or(()); // NOTE(adma): ignore return value ...
+        self.disconnect().unwrap_or_default(); // NOTE(adma): ignore return value ...
     }
 }
 
 unsafe impl Send for Session {}
-unsafe impl Sync for Session {}
 
 /// Session handle
 impl Session {
@@ -213,7 +215,9 @@ impl Session {
             res = lyh::yh_util_close_session(self.ptr);
         }
 
-        if res != yh_rc::YHR_SUCCESS && res != yh_rc::YHR_DEVICE_INV_SESSION {
+        let e = yh_rc_enum::from(res);
+
+        if e != yh_rc_enum::YHR_SUCCESS && e != yh_rc_enum::YHR_DEVICE_INV_SESSION {
             return error::result_from_libyh(res);
         }
 
@@ -222,7 +226,9 @@ impl Session {
             res = lyh::yh_destroy_session(&self.ptr);
         }
 
-        if res != yh_rc::YHR_SUCCESS {
+        let e = yh_rc_enum::from(res);
+
+        if e != yh_rc_enum::YHR_SUCCESS {
             return error::result_from_libyh(res);
         }
 
@@ -231,28 +237,28 @@ impl Session {
 
     /// List objects on the device
     pub fn list_objects(&self) -> Result<Vec<ObjectHandle>, Error> {
-        let capa = lyh::yh_capabilities {
+        let capa = yh_capabilities {
             capabilities: [0u8; 8],
         };
-        let descriptor = lyh::yh_object_descriptor::default();
-        let mut objects = vec![descriptor; 512].into_boxed_slice();
+        let descriptor = yh_object_descriptor::default();
+        let mut objects = vec![descriptor; 512];
         let mut n_objects = 512;
 
         let res = unsafe {
             lyh::yh_util_list_objects(
                 self.ptr,
                 0,
-                lyh::yh_object_type::YH_ANY,
+                0,
                 0,
                 &capa,
-                lyh::yh_algorithm::YH_ALGO_ANY,
+                0,
                 std::ptr::null(),
                 objects.as_mut_ptr(),
                 &mut n_objects,
             )
         };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(objects[0..n_objects]
             .iter()
@@ -272,7 +278,7 @@ impl Session {
             lyh::yh_util_get_object_info(self.ptr, id, object_type.into(), &mut descriptor)
         };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(ObjectDescriptor::from(descriptor))
     }
@@ -281,23 +287,25 @@ impl Session {
     pub fn delete_object(&self, id: u16, object_type: object::ObjectType) -> Result<(), Error> {
         let res = unsafe { lyh::yh_util_delete_object(self.ptr, id, object_type.into()) };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(())
     }
 
     /// Get random data
     pub fn get_random(&self, count: usize) -> Result<Vec<u8>, Error> {
-        let mut bytes = vec![0; count].into_boxed_slice();
+        let mut bytes = vec![0; count];
         let mut returned = count;
 
         let res = unsafe {
             lyh::yh_util_get_pseudo_random(self.ptr, count, bytes.as_mut_ptr(), &mut returned)
         };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
-        Ok(bytes.into_vec())
+        bytes.truncate(returned);
+
+        Ok(bytes)
     }
 
     /// Import an authkey
@@ -312,7 +320,7 @@ impl Session {
     ) -> Result<u16, Error> {
         let mut real_id = id;
 
-        let c_str = ::std::ffi::CString::new(label).unwrap();
+        let c_str = ::std::ffi::CString::new(label)?;
 
         let res = unsafe {
             lyh::yh_util_import_authentication_key_derived(
@@ -326,7 +334,7 @@ impl Session {
                 password.len(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(real_id)
     }
@@ -345,7 +353,7 @@ impl Session {
     ) -> Result<u16, Error> {
         let mut real_id = id;
 
-        let c_str = ::std::ffi::CString::new(label).unwrap();
+        let c_str = ::std::ffi::CString::new(label)?;
 
         let res = unsafe {
             lyh::yh_util_import_wrap_key(
@@ -360,7 +368,7 @@ impl Session {
                 wrapkey.len(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(real_id)
     }
@@ -382,7 +390,7 @@ impl Session {
         target_type: object::ObjectType,
         target_id: u16,
     ) -> Result<Vec<u8>, Error> {
-        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize];
         let mut out_len = out.len();
 
         let res = unsafe {
@@ -395,12 +403,11 @@ impl Session {
                 &mut out_len,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
-        let mut out_vec = out.into_vec();
-        out_vec.truncate(out_len);
+        out.truncate(out_len);
 
-        Ok(out_vec)
+        Ok(out)
     }
 
     /// Import a wrapped object
@@ -409,7 +416,7 @@ impl Session {
         wrapping_key_id: u16,
         bytes: &[u8],
     ) -> Result<ObjectHandle, Error> {
-        let mut object_type: lyh::yh_object_type = lyh::yh_object_type::default();
+        let mut object_type = 0;
         let mut id: u16 = 0;
 
         let res = unsafe {
@@ -422,11 +429,11 @@ impl Session {
                 &mut id,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(ObjectHandle {
             object_id: id,
-            object_type: (&object_type).into(),
+            object_type: object_type.into(),
         })
     }
 
@@ -440,7 +447,7 @@ impl Session {
         algorithm: ObjectAlgorithm,
         bytes: &[u8],
     ) -> Result<OpaqueObject, Error> {
-        let c_str = ::std::ffi::CString::new(label).unwrap();
+        let c_str = ::std::ffi::CString::new(label)?;
 
         let mut id: u16 = object_id;
 
@@ -456,7 +463,7 @@ impl Session {
                 bytes.len(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(OpaqueObject::new(
             id,
@@ -475,7 +482,7 @@ impl Session {
         domains: &[ObjectDomain],
         key_algorithm: ObjectAlgorithm,
     ) -> Result<AsymmetricKey, Error> {
-        let c_str = ::std::ffi::CString::new(label).unwrap();
+        let c_str = ::std::ffi::CString::new(label)?;
 
         let mut key_id: u16 = 0;
         if unsafe { lyh::yh_is_rsa(key_algorithm.into()) } {
@@ -489,7 +496,7 @@ impl Session {
                     key_algorithm.into(),
                 )
             };
-            try!(::error::result_from_libyh(res));
+            ::error::result_from_libyh(res)?;
         } else if unsafe { lyh::yh_is_ec(key_algorithm.into()) } {
             let res = unsafe {
                 lyh::yh_util_generate_ec_key(
@@ -501,7 +508,7 @@ impl Session {
                     key_algorithm.into(),
                 )
             };
-            try!(::error::result_from_libyh(res));
+            ::error::result_from_libyh(res)?;
         } else if unsafe { lyh::yh_is_ed(key_algorithm.into()) } {
             let res = unsafe {
                 lyh::yh_util_generate_ed_key(
@@ -513,7 +520,7 @@ impl Session {
                     key_algorithm.into(),
                 )
             };
-            try!(error::result_from_libyh(res));
+            error::result_from_libyh(res)?;
         } else {
             return Err(Error::InvalidParameter("Key algorithm".to_string()));
         }
@@ -531,7 +538,7 @@ impl Session {
 impl Drop for Session {
     fn drop(&mut self) {
         trace!("Dropping session");
-        self.close().unwrap_or(()); // NOTE(adma): ignore return value ...
+        self.close().unwrap_or_default(); // NOTE(adma): ignore return value ...
     }
 }
 

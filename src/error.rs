@@ -41,6 +41,12 @@ impl fmt::Display for Error {
     }
 }
 
+impl From<std::ffi::NulError> for Error {
+    fn from(_: std::ffi::NulError) -> Self {
+        Error::InvalidParameter("String contains embedded nul bytes".to_string())
+    }
+}
+
 impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
@@ -62,12 +68,15 @@ impl error::Error for Error {
 // Public but not re-exported by lib.rs, so only visible within crate.
 
 pub fn result_from_libyh(code: lyh::yh_rc) -> ::std::result::Result<(), Error> {
-    match code {
-        lyh::yh_rc::YHR_SUCCESS => Ok(()),
-        err => Err(Error::LibYubiHsm(lyh::Error::new(err))),
-    }
+    result_from_libyh_enum(code.into())
 }
 
+pub fn result_from_libyh_enum(code: lyh::yh_rc_enum) -> ::std::result::Result<(), Error> {
+    match code {
+        lyh::yh_rc_enum::YHR_SUCCESS => Ok(()),
+        _ => Err(Error::LibYubiHsm(code.into())),
+    }
+}
 #[cfg(test)]
 mod tests {
 
