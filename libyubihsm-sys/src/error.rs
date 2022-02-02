@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
+extern crate num_enum;
+
 use std::error;
 use std::fmt;
+use std::os::raw::{c_char, c_int, c_uint};
+
+/// FFI return type of the public functions
+pub type yh_rc = c_int;
 
 #[repr(i32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::FromPrimitive)]
 /// Return type of the public functions
-pub enum yh_rc {
+pub enum yh_rc_enum {
     /// Successs
     YHR_SUCCESS = 0,
     /// Memory error
@@ -81,11 +87,21 @@ pub enum yh_rc {
     YHR_DEVICE_OBJECT_EXISTS = -28,
     /// Connector operation failed
     YHR_CONNECTOR_ERROR = -29,
+    /// Return value when encountering SSH CA constraint violation
+    YHR_DEVICE_SSH_CA_CONSTRAINT_VIOLATION = -30,
+    /// Return value when an algorithm is disabled
+    YHR_DEVICE_ALGORITHM_DISABLED = -31,
+    #[num_enum(default)]
+    /// Return value for unknown error codes
+    YHR_UNKNOWN_ERROR = -99
 }
 
 #[derive(Clone, Copy, Debug)]
 /// Rust enum of possible error types
 pub enum Error {
+    /// Success
+    Success,
+
     /// Unable to allocate memory
     Memory,
 
@@ -172,45 +188,58 @@ pub enum Error {
 
     /// Connector operation failed
     ConnectorError,
+
+    /// Return value when encountering SSH CA constraint violation
+    SshCaConstraintViolation,
+
+    /// Return value when an algorithm is disabled
+    AlgorithmDisabled,
+
+    /// Unknown error
+    Unknown
 }
 
-fn code_to_err(return_code: yh_rc) -> Error {
+fn code_to_err(return_code: yh_rc_enum) -> Error {
     match return_code {
-        yh_rc::YHR_MEMORY => Error::Memory,
-        yh_rc::YHR_INIT_ERROR => Error::InitError,
-        yh_rc::YHR_NET_ERROR => Error::NetworkError,
-        yh_rc::YHR_CONNECTOR_NOT_FOUND => Error::ConnectorNotFound,
-        yh_rc::YHR_INVALID_PARAMS => Error::InvalidParams,
-        yh_rc::YHR_WRONG_LENGTH => Error::WrongLength,
-        yh_rc::YHR_BUFFER_TOO_SMALL => Error::BufferTooSmall,
-        yh_rc::YHR_CRYPTOGRAM_MISMATCH => Error::CryptogramMismatch,
-        yh_rc::YHR_AUTH_SESSION_ERROR => Error::AuthSessionError,
-        yh_rc::YHR_MAC_MISMATCH => Error::MacMismatch,
-        yh_rc::YHR_DEVICE_OK => Error::DeviceOk,
-        yh_rc::YHR_DEVICE_INV_COMMAND => Error::DeviceInvalidCommand,
-        yh_rc::YHR_DEVICE_INV_DATA => Error::DeviceInvalidData,
-        yh_rc::YHR_DEVICE_INV_SESSION => Error::DeviceInvalidSession,
-        yh_rc::YHR_DEVICE_AUTH_FAIL => Error::DeviceAuthenticationFailed,
-        yh_rc::YHR_DEVICE_SESSIONS_FULL => Error::DeviceSessionsFull,
-        yh_rc::YHR_DEVICE_SESSION_FAILED => Error::DeviceSessionFailed,
-        yh_rc::YHR_DEVICE_STORAGE_FAILED => Error::DeviceStorageFailed,
-        yh_rc::YHR_DEVICE_WRONG_LENGTH => Error::DeviceWrongLength,
-        yh_rc::YHR_DEVICE_INV_PERMISSION => Error::DeviceInvalidPermissions,
-        yh_rc::YHR_DEVICE_LOG_FULL => Error::DeviceLogFull,
-        yh_rc::YHR_DEVICE_OBJ_NOT_FOUND => Error::DeviceObjectNotFound,
-        yh_rc::YHR_DEVICE_ID_ILLEGAL => Error::DeviceIdIllegal,
-        yh_rc::YHR_DEVICE_INVALID_OTP => Error::DeviceInvalidOtp,
-        yh_rc::YHR_DEVICE_DEMO_MODE => Error::DeviceDemoMode,
-        yh_rc::YHR_DEVICE_CMD_UNEXECUTED => Error::DeviceCmdUnexecuted,
-        yh_rc::YHR_GENERIC_ERROR => Error::GenericError,
-        yh_rc::YHR_DEVICE_OBJECT_EXISTS => Error::ObjectExists,
-        yh_rc::YHR_CONNECTOR_ERROR => Error::ConnectorError,
-        yh_rc::YHR_SUCCESS => unreachable!(),
+        yh_rc_enum::YHR_SUCCESS => Error::Success,
+        yh_rc_enum::YHR_MEMORY => Error::Memory,
+        yh_rc_enum::YHR_INIT_ERROR => Error::InitError,
+        yh_rc_enum::YHR_NET_ERROR => Error::NetworkError,
+        yh_rc_enum::YHR_CONNECTOR_NOT_FOUND => Error::ConnectorNotFound,
+        yh_rc_enum::YHR_INVALID_PARAMS => Error::InvalidParams,
+        yh_rc_enum::YHR_WRONG_LENGTH => Error::WrongLength,
+        yh_rc_enum::YHR_BUFFER_TOO_SMALL => Error::BufferTooSmall,
+        yh_rc_enum::YHR_CRYPTOGRAM_MISMATCH => Error::CryptogramMismatch,
+        yh_rc_enum::YHR_AUTH_SESSION_ERROR => Error::AuthSessionError,
+        yh_rc_enum::YHR_MAC_MISMATCH => Error::MacMismatch,
+        yh_rc_enum::YHR_DEVICE_OK => Error::DeviceOk,
+        yh_rc_enum::YHR_DEVICE_INV_COMMAND => Error::DeviceInvalidCommand,
+        yh_rc_enum::YHR_DEVICE_INV_DATA => Error::DeviceInvalidData,
+        yh_rc_enum::YHR_DEVICE_INV_SESSION => Error::DeviceInvalidSession,
+        yh_rc_enum::YHR_DEVICE_AUTH_FAIL => Error::DeviceAuthenticationFailed,
+        yh_rc_enum::YHR_DEVICE_SESSIONS_FULL => Error::DeviceSessionsFull,
+        yh_rc_enum::YHR_DEVICE_SESSION_FAILED => Error::DeviceSessionFailed,
+        yh_rc_enum::YHR_DEVICE_STORAGE_FAILED => Error::DeviceStorageFailed,
+        yh_rc_enum::YHR_DEVICE_WRONG_LENGTH => Error::DeviceWrongLength,
+        yh_rc_enum::YHR_DEVICE_INV_PERMISSION => Error::DeviceInvalidPermissions,
+        yh_rc_enum::YHR_DEVICE_LOG_FULL => Error::DeviceLogFull,
+        yh_rc_enum::YHR_DEVICE_OBJ_NOT_FOUND => Error::DeviceObjectNotFound,
+        yh_rc_enum::YHR_DEVICE_ID_ILLEGAL => Error::DeviceIdIllegal,
+        yh_rc_enum::YHR_DEVICE_INVALID_OTP => Error::DeviceInvalidOtp,
+        yh_rc_enum::YHR_DEVICE_DEMO_MODE => Error::DeviceDemoMode,
+        yh_rc_enum::YHR_DEVICE_CMD_UNEXECUTED => Error::DeviceCmdUnexecuted,
+        yh_rc_enum::YHR_GENERIC_ERROR => Error::GenericError,
+        yh_rc_enum::YHR_DEVICE_OBJECT_EXISTS => Error::ObjectExists,
+        yh_rc_enum::YHR_CONNECTOR_ERROR => Error::ConnectorError,
+        yh_rc_enum::YHR_DEVICE_SSH_CA_CONSTRAINT_VIOLATION => Error::SshCaConstraintViolation,
+        yh_rc_enum::YHR_DEVICE_ALGORITHM_DISABLED => Error::AlgorithmDisabled,
+        yh_rc_enum::YHR_UNKNOWN_ERROR => Error::Unknown
     }
 }
 
 fn code_to_str(return_code: Error) -> &'static str {
     match return_code {
+        Error::Success => "Success",
         Error::Memory => "Unable to allocate memory",
         Error::InitError => "Unable to initialize the libyubihsm",
         Error::NetworkError => "Libcurl error",
@@ -240,12 +269,20 @@ fn code_to_str(return_code: Error) -> &'static str {
         Error::GenericError => "Generic error",
         Error::ObjectExists => "Object with given ID and type already exists",
         Error::ConnectorError => "Connector operation failed",
+        Error::SshCaConstraintViolation => "SSH CA constraint violation",
+        Error::AlgorithmDisabled => "Algorithm disabled",
+        Error::Unknown => "Unknown error"
     }
 }
 
-impl Error {
-    /// Create an Error type from a `yh_rc` value
-    pub fn new(return_code: yh_rc) -> Self {
+impl From<yh_rc> for Error {
+    fn from(return_code: yh_rc) -> Self {
+        Self::from(yh_rc_enum::from(return_code))
+    }
+}
+
+impl From<yh_rc_enum> for Error {
+    fn from(return_code: yh_rc_enum) -> Self {
         code_to_err(return_code)
     }
 }

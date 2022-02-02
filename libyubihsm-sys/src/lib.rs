@@ -28,6 +28,8 @@
 
 //! FFI bindings for libyubihsm
 
+extern crate num_enum;
+
 pub use self::error::*;
 
 use std::os::raw::{c_char, c_int, c_uint};
@@ -157,10 +159,13 @@ fn bindgen_test_layout_yh_capabilities() {
     );
 }
 
+/// Raw Command byte definitions
+pub type yh_cmd = c_uint;
+
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::TryFromPrimitive)]
 /// Command byte definitions
-pub enum yh_cmd {
+pub enum yh_cmd_enum {
     /// Echo, request
     YHC_ECHO = 0x01,
     /// Echo, response
@@ -369,10 +374,14 @@ pub enum yh_cmd {
     YHC_ERROR = 0x7f,
 }
 
+/// Raw Object types
+pub type yh_object_type = c_uint;
+
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::FromPrimitive)]
 /// Object types
-pub enum yh_object_type {
+pub enum yh_object_type_enum {
+    #[num_enum(default)]
     /// Any object type (convenience value, not in libyubihsm)
     YH_ANY = 0x00,
     /// Opaque object
@@ -393,17 +402,15 @@ pub enum yh_object_type {
     YH_PUBLIC_KEY = 0x83,
 }
 
-impl Default for yh_object_type {
-    fn default() -> yh_object_type {
-        yh_object_type::YH_ANY
-    }
-}
+/// Raw Algorithms
+pub type yh_algorithm = c_uint;
 
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::FromPrimitive)]
 /// Algorithms
-pub enum yh_algorithm {
+pub enum yh_algorithm_enum {
     /// Any algorithm (convenience value, not in libyubihsm)
+    #[num_enum(default)]
     YH_ALGO_ANY = 0,
     /// RSA PKCS1v1.5 with SHA1
     YH_ALGO_RSA_PKCS1_SHA1 = 1,
@@ -501,28 +508,30 @@ pub enum yh_algorithm {
     YH_ALGO_EC_P224 = 47,
     /// RSA PKCS1v1.5 decrypt
     YH_ALGO_RSA_PKCS1_DECRYPT = 48,
+    /// ec-p256-yubico-authentication
+    YH_ALGO_EC_P256_YUBICO_AUTHENTICATION = 49,
 }
 
-impl Default for yh_algorithm {
-    fn default() -> yh_algorithm {
-        yh_algorithm::YH_ALGO_ANY
-    }
-}
+/// Raw Device-global options
+pub type yh_option = c_uint;
 
 #[repr(u32)]
 /// Device-global options
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum yh_option {
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::TryFromPrimitive)]
+pub enum yh_option_enum {
     /// Forced audit mode
     YH_OPTION_FORCE_AUDIT = 1,
     /// Audit logging per command
     YH_OPTION_COMMAND_AUDIT = 3,
 }
 
+/// Raw Connector options
+pub type yh_connector_option = c_uint;
+
 #[repr(u32)]
 /// Connector options
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum yh_connector_option {
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::TryFromPrimitive)]
+pub enum yh_connector_option_enum {
     /// File with CA certificate to validate the connector with (const char *) not
     /// implemented on Windows
     YH_CONNECTOR_HTTPS_CA = 1,
@@ -680,7 +689,7 @@ impl ToString for yh_label {
         String::from(
             unsafe { ::std::ffi::CStr::from_ptr(&self.label[0]) }
                 .to_str()
-                .unwrap(),
+                .unwrap_or_default(),
         )
     }
 }
