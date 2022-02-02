@@ -309,25 +309,25 @@ pub enum ObjectOrigin {
 /// Object descriptor
 pub struct ObjectDescriptor {
     /// Ccapabilities
-    capabilities: Vec<ObjectCapability>,
+    pub capabilities: Vec<ObjectCapability>,
     /// Id
-    id: u16,
+    pub id: u16,
     /// Size/Length
-    len: u16,
+    pub len: u16,
     /// Domains
-    domains: Vec<ObjectDomain>,
+    pub domains: Vec<ObjectDomain>,
     /// Type
-    object_type: ObjectType,
+    pub object_type: ObjectType,
     /// Algorithm
-    algorithm: ObjectAlgorithm,
+    pub algorithm: ObjectAlgorithm,
     /// Sequence
-    sequence: u8,
+    pub sequence: u8,
     /// Origin
-    origin: ObjectOrigin,
+    pub origin: ObjectOrigin,
     /// Label
-    label: String,
+    pub label: String,
     /// Delegated Capabilities
-    delegated_capabilities: Option<Vec<ObjectCapability>>,
+    pub delegated_capabilities: Option<Vec<ObjectCapability>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -957,11 +957,16 @@ impl ObjectAlgorithm {
 /// struct representing an asymmetric key
 #[derive(Debug, Clone)]
 pub struct AsymmetricKey {
-    key_id: u16,
-    label: String,
-    algorithm: ObjectAlgorithm,
-    capabilities: Vec<ObjectCapability>,
-    domains: Vec<ObjectDomain>,
+    /// Key id
+    pub key_id: u16,
+    /// Object label
+    pub label: String,
+    /// Object algorithm
+    pub algorithm: ObjectAlgorithm,
+    /// Object capabilities
+    pub capabilities: Vec<ObjectCapability>,
+    /// Object domains
+    pub domains: Vec<ObjectDomain>,
 }
 
 impl AsymmetricKey {
@@ -1031,11 +1036,16 @@ impl AsymmetricKey {
 /// struct representing an opaque object
 #[derive(Debug)]
 pub struct OpaqueObject {
-    object_id: u16,
-    label: String,
-    algorithm: ObjectAlgorithm,
-    capabilities: Vec<ObjectCapability>,
-    domains: Vec<ObjectDomain>,
+    /// Object id
+    pub object_id: u16,
+    /// Object label
+    pub label: String,
+    /// Object algorithm
+    pub algorithm: ObjectAlgorithm,
+    /// Object capabilities
+    pub capabilities: Vec<ObjectCapability>,
+    /// Object domains
+    pub domains: Vec<ObjectDomain>,
 }
 
 impl OpaqueObject {

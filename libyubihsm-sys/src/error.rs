@@ -18,7 +18,7 @@ extern crate num_enum;
 
 use std::error;
 use std::fmt;
-use std::os::raw::{c_char, c_int, c_uint};
+use std::os::raw::c_int;
 
 /// FFI return type of the public functions
 pub type yh_rc = c_int;

@@ -71,19 +71,19 @@ pub struct Session {
 /// Device information
 pub struct DeviceInfo {
     /// Major version
-    major: u8,
+    pub major: u8,
     /// Minor version
-    minor: u8,
+    pub minor: u8,
     /// Patch version
-    patch: u8,
+    pub patch: u8,
     /// Serial number
-    serial: u32,
+    pub serial: u32,
     /// Available log entries
-    log_total: u8,
+    pub log_total: u8,
     /// Used log entries
-    log_used: u8,
+    pub log_used: u8,
     /// Supported algorihms
-    algorithms: Vec<yh_algorithm_enum>,
+    pub algorithms: Vec<yh_algorithm_enum>,
 }
 
 /// Initialize libyubihsm
