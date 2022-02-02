@@ -911,13 +911,6 @@ fn bindgen_test_layout_yh_cap() {
         )
     );
 }
-
-extern "C" {
-    #[link_name = "yh_capability"]
-    /// Object capabilities
-    pub static mut yh_capability: [yh_cap; 47usize];
-}
-
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 /// Algorithms
@@ -962,12 +955,6 @@ fn bindgen_test_layout_yh_algo() {
             stringify!(algorithm)
         )
     );
-}
-
-extern "C" {
-    #[link_name = "yh_algorithms"]
-    /// Object and function algorithm
-    pub static mut yh_algorithms: [yh_algo; 46usize];
 }
 
 #[repr(C)]
@@ -1016,12 +1003,6 @@ fn bindgen_test_layout_yh_ot() {
     );
 }
 
-extern "C" {
-    #[link_name = "yh_types"]
-    /// Object type
-    pub static mut yh_types: [yh_ot; 7usize];
-}
-
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 /// Options
@@ -1066,12 +1047,6 @@ fn bindgen_test_layout_yh_opt() {
             stringify!(option)
         )
     );
-}
-
-extern "C" {
-    #[link_name = "yh_options"]
-    /// Device global setting
-    pub static mut yh_options: [yh_opt; 2usize];
 }
 
 extern "C" {
