@@ -23,6 +23,8 @@ use error::Error;
 
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::fmt;
+use std::fmt::Display;
 
 use Session;
 
@@ -45,9 +47,11 @@ pub enum ObjectType {
     OtpAeadKey,
     /// Public key (virtual)
     PublicKey,
+    /// Any type
+    Any,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 /// Object capabilities
 pub enum ObjectCapability {
     /// Get opaque object
@@ -280,6 +284,8 @@ pub enum ObjectAlgorithm {
     EcP224,
     /// RSA PKCS1v1.5 decrypt
     RsaPkcs1Decrypt,
+    /// Any algorithms
+    ANY,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -299,25 +305,25 @@ pub enum ObjectOrigin {
 /// Object descriptor
 pub struct ObjectDescriptor {
     /// Ccapabilities
-    capabilities: Vec<ObjectCapability>,
+    pub capabilities: Vec<ObjectCapability>,
     /// Id
-    id: u16,
+    pub id: u16,
     /// Size/Length
     len: u16,
     /// Domains
-    domains: Vec<ObjectDomain>,
+    pub domains: Vec<ObjectDomain>,
     /// Type
-    object_type: ObjectType,
+    pub object_type: ObjectType,
     /// Algorithm
-    algorithm: ObjectAlgorithm,
+    pub algorithm: ObjectAlgorithm,
     /// Sequence
-    sequence: u8,
+    pub sequence: u8,
     /// Origin
-    origin: ObjectOrigin,
+    pub origin: ObjectOrigin,
     /// Label
-    label: String,
+    pub label: String,
     /// Delegated Capabilities
-    delegated_capabilities: Option<Vec<ObjectCapability>>,
+    pub delegated_capabilities: Option<Vec<ObjectCapability>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -383,6 +389,122 @@ lazy_static! {
          ((5, 0x10), ObjectCapability::DeleteTemplate),
          ((5, 0x20), ObjectCapability::DeleteOtpAeadKey)]
          .iter().cloned().collect();
+}
+
+impl fmt::Debug for ObjectCapability {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ObjectCapability::GetOpaque => write!(f, "get-opaque"),
+            ObjectCapability::PutOpaque => write!(f, "put-opaque"),
+            ObjectCapability::PutAuthenticationKey => write!(f, "put-authentication-key"),
+            ObjectCapability::PutAsymmetricKey => write!(f, "put-asymmetric-key"),
+            ObjectCapability::GenerateAsymmetricKey => write!(f, "generate-asymmetric-key"),
+            ObjectCapability::SignPkcs => write!(f, "sign-pkcs"),
+            ObjectCapability::SignPss => write!(f, "sign-pss"),
+            ObjectCapability::SignEcdsa => write!(f, "sign-ecdsa"),
+
+            ObjectCapability::SignEddsa => write!(f, "sign-eddsa"),
+            ObjectCapability::DecryptPkcs => write!(f, "decrypt-pkcs"),
+            ObjectCapability::DecryptOaep => write!(f, "decrypt-oaep"),
+            ObjectCapability::DeriveEcdh => write!(f, "derive-ecdh"),
+            ObjectCapability::ExportWrapped => write!(f, "export-wrapped"),
+            ObjectCapability::ImportWrapped => write!(f, "import-wrapped"),
+            ObjectCapability::PutWrapKey => write!(f, "put-wrap-key"),
+            ObjectCapability::GenerateWrapKey => write!(f, "generate-wrap-key"),
+
+            ObjectCapability::ExportableUnderWrap => write!(f, "exportable-under-wrap"),
+            ObjectCapability::SetOption => write!(f, "set-option"),
+            ObjectCapability::GetOption => write!(f, "get-option"),
+            ObjectCapability::GetPseudoRandom => write!(f, "get-pseudo-random"),
+            ObjectCapability::PutHmacKey => write!(f, "put-mac-key"),
+            ObjectCapability::GenerateHmacKey => write!(f, "generate-hmac-key"),
+            ObjectCapability::SignHmac => write!(f, "sign-hmac"),
+            ObjectCapability::VerifyHmac => write!(f, "verify-hmac"),
+
+            ObjectCapability::GetLogEntries => write!(f, "get-log-entries"),
+            ObjectCapability::SignSshCertificate => write!(f, "sign-ssh-certificate"),
+            ObjectCapability::GetTemplate => write!(f, "get-template"),
+            ObjectCapability::PutTemplate => write!(f, "put-template"),
+            ObjectCapability::ResetDevice => write!(f, "reset-device"),
+            ObjectCapability::DecryptOtp => write!(f, "decrypt-otp"),
+            ObjectCapability::CreateOtpAead => write!(f, "create-otp-aead"),
+            ObjectCapability::RandomizeOtpAead => write!(f, "randomize-otp-aead"),
+
+            ObjectCapability::RewrapFromOtpAeadKey => write!(f, "rewrap-from-otp-aead-key"),
+            ObjectCapability::RewrapToOtpAeadKey => write!(f, "rewrap-to-otp-aead-key"),
+            ObjectCapability::SignAttestationCertificate => write!(f, "sign-attestation-certificate"),
+            ObjectCapability::PutOtpAeadKey => write!(f, "put-otp-aead-key"),
+            ObjectCapability::GenerateOtpAeadKey => write!(f, "generate-otp-aead-key"),
+            ObjectCapability::WrapData => write!(f, "wrap-data"),
+            ObjectCapability::UnwrapData => write!(f, "unwrap-data"),
+            ObjectCapability::DeleteOpaque => write!(f, "delete-opaque"),
+
+            ObjectCapability::DeleteAuthenticationKey => write!(f, "delete-authentication-key"),
+            ObjectCapability::DeleteAsymmetricKey => write!(f, "delete-asymmetric-key"),
+            ObjectCapability::DeleteWrapKey => write!(f, "delete-wrap-key"),
+            ObjectCapability::DeleteHmacKey => write!(f, "delete-hmac-key"),
+            ObjectCapability::DeleteTemplate => write!(f, "delete-template"),
+            ObjectCapability::DeleteOtpAeadKey => write!(f, "delete-otp-aead-key"),
+        }
+    }
+}
+
+impl Display for ObjectCapability {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ObjectCapability::GetOpaque => write!(f, "Read Opaque Objects"),
+            ObjectCapability::PutOpaque => write!(f, "Write Opaque Objects"),
+            ObjectCapability::PutAuthenticationKey => write!(f, "Write Authentication Key Objects"),
+            ObjectCapability::PutAsymmetricKey => write!(f, "Write Asymmetric Key Objects"),
+            ObjectCapability::GenerateAsymmetricKey => write!(f, "Generate Asymmetric Key Objects"),
+            ObjectCapability::SignPkcs => write!(f, "Compute signatures using RSA-PKCS1v1.5"),
+            ObjectCapability::SignPss => write!(f, "Compute digital signatures using using RSA-PSS"),
+            ObjectCapability::SignEcdsa => write!(f, "Compute digital signatures using ECDSA"),
+
+            ObjectCapability::SignEddsa => write!(f, "Compute digital signatures using EDDSA"),
+            ObjectCapability::DecryptPkcs => write!(f, "Decrypt data using RSA-PKCS1v1.5"),
+            ObjectCapability::DecryptOaep => write!(f, "Decrypt data using RSA-OAEP"),
+            ObjectCapability::DeriveEcdh => write!(f, "Perform ECDH"),
+            ObjectCapability::ExportWrapped => write!(f, "Export other Objects under wrap"),
+            ObjectCapability::ImportWrapped => write!(f, "Import wrapped Objects"),
+            ObjectCapability::PutWrapKey => write!(f, "Write Wrap Key Objects"),
+            ObjectCapability::GenerateWrapKey => write!(f, "Generate Wrap Key Objects"),
+
+            ObjectCapability::ExportableUnderWrap => write!(f, "Mark an Object as exportable under wrap"),
+            ObjectCapability::SetOption => write!(f, "Write device-global options"),
+            ObjectCapability::GetOption => write!(f, "Read device-global options"),
+            ObjectCapability::GetPseudoRandom => write!(f, "Extract random bytes"),
+            ObjectCapability::PutHmacKey => write!(f, "Write HMAC Key Objects"),
+            ObjectCapability::GenerateHmacKey => write!(f, "Generate HMAC Key Objects"),
+            ObjectCapability::SignHmac => write!(f, "Compute HMAC of data"),
+            ObjectCapability::VerifyHmac => write!(f, "Verify HMAC of data"),
+
+            ObjectCapability::GetLogEntries => write!(f, "Read the Log Store"),
+            ObjectCapability::SignSshCertificate => write!(f, "Sign SSH certificates"),
+            ObjectCapability::GetTemplate => write!(f, "Read Template Objects"),
+            ObjectCapability::PutTemplate => write!(f, "Write Template Objects"),
+            ObjectCapability::ResetDevice => write!(f, "Perform a factory reset on the device"),
+            ObjectCapability::DecryptOtp => write!(f, "Decrypt OTP"),
+            ObjectCapability::CreateOtpAead => write!(f, "Create OTP AEAD"),
+            ObjectCapability::RandomizeOtpAead => write!(f, "Create OTP AEAD from random data"),
+
+            ObjectCapability::RewrapFromOtpAeadKey => write!(f, "Rewrap AEADs from one OTP AEAD Key Object to another"),
+            ObjectCapability::RewrapToOtpAeadKey => write!(f, "Rewrap AEADs to one OTP AEAD Key Object from another"),
+            ObjectCapability::SignAttestationCertificate => write!(f, "Attest properties of Asymmetric Key Objects"),
+            ObjectCapability::PutOtpAeadKey => write!(f, "Write OTP AEAD Key Objects"),
+            ObjectCapability::GenerateOtpAeadKey => write!(f, "Generate OTP AEAD Key Objects"),
+            ObjectCapability::WrapData => write!(f, "Wrap user-provided data"),
+            ObjectCapability::UnwrapData => write!(f, "Unwrap user-provided data"),
+            ObjectCapability::DeleteOpaque => write!(f, "Delete Opaque Objects"),
+
+            ObjectCapability::DeleteAuthenticationKey => write!(f, "Delete Authentication Key Objects"),
+            ObjectCapability::DeleteAsymmetricKey => write!(f, "Delete Asymmetric Key Objects"),
+            ObjectCapability::DeleteWrapKey => write!(f, "Delete Wrap Key Objects"),
+            ObjectCapability::DeleteHmacKey => write!(f, "Delete HMAC Key Objects"),
+            ObjectCapability::DeleteTemplate => write!(f, "Delete Template Objects"),
+            ObjectCapability::DeleteOtpAeadKey => write!(f, "Delete OTP AEAD Key Objects"),
+        }
+    }
 }
 
 impl ObjectCapability {
@@ -550,25 +672,25 @@ impl ObjectDomain {
     }
 }
 
-impl std::fmt::Display for ObjectDomain {
+impl Display for ObjectDomain {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ObjectDomain::One => write!(f, "One"),
-            ObjectDomain::Two => write!(f, "Two"),
-            ObjectDomain::Three => write!(f, "Three"),
-            ObjectDomain::Four => write!(f, "Four"),
-            ObjectDomain::Five => write!(f, "Five"),
-            ObjectDomain::Six => write!(f, "Six"),
-            ObjectDomain::Seven => write!(f, "Seven"),
-            ObjectDomain::Eight => write!(f, "Eight"),
-            ObjectDomain::Nine => write!(f, "Nine"),
-            ObjectDomain::Ten => write!(f, "Ten"),
-            ObjectDomain::Eleven => write!(f, "Eleven"),
-            ObjectDomain::Twelve => write!(f, "Twelve"),
-            ObjectDomain::Thirteen => write!(f, "Thirteen"),
-            ObjectDomain::Fourteen => write!(f, "Fourteen"),
-            ObjectDomain::Fifteen => write!(f, "Fifteen"),
-            ObjectDomain::Sixteen => write!(f, "Sixteen"),
+            ObjectDomain::One => write!(f, "1"),
+            ObjectDomain::Two => write!(f, "2"),
+            ObjectDomain::Three => write!(f, "3"),
+            ObjectDomain::Four => write!(f, "4"),
+            ObjectDomain::Five => write!(f, "5"),
+            ObjectDomain::Six => write!(f, "6"),
+            ObjectDomain::Seven => write!(f, "7"),
+            ObjectDomain::Eight => write!(f, "8"),
+            ObjectDomain::Nine => write!(f, "9"),
+            ObjectDomain::Ten => write!(f, "10"),
+            ObjectDomain::Eleven => write!(f, "11"),
+            ObjectDomain::Twelve => write!(f, "12"),
+            ObjectDomain::Thirteen => write!(f, "13"),
+            ObjectDomain::Fourteen => write!(f, "14"),
+            ObjectDomain::Fifteen => write!(f, "15"),
+            ObjectDomain::Sixteen => write!(f, "16"),
         }
     }
 }
@@ -576,7 +698,7 @@ impl std::fmt::Display for ObjectDomain {
 impl From<yh_object_type> for ObjectType {
     fn from(object_type: yh_object_type) -> Self {
         match object_type {
-            yh_object_type::YH_ANY => unreachable!(),
+            yh_object_type::YH_ANY => ObjectType::Any,
             yh_object_type::YH_OPAQUE => ObjectType::Opaque,
             yh_object_type::YH_AUTHENTICATION_KEY => ObjectType::AuthenticationKey,
             yh_object_type::YH_ASYMMETRIC_KEY => ObjectType::AsymmetricKey,
@@ -598,7 +720,7 @@ impl<'a> From<&'a yh_object_type> for ObjectType {
 impl From<yh_algorithm> for ObjectAlgorithm {
     fn from(algorithm: yh_algorithm) -> ObjectAlgorithm {
         match algorithm {
-            yh_algorithm::YH_ALGO_ANY => unreachable!(),
+            yh_algorithm::YH_ALGO_ANY => ObjectAlgorithm::ANY,
             yh_algorithm::YH_ALGO_RSA_PKCS1_SHA1 => ObjectAlgorithm::RsaPkcs1Sha1,
             yh_algorithm::YH_ALGO_RSA_PKCS1_SHA256 => ObjectAlgorithm::RsaPkcs1Sha256,
             yh_algorithm::YH_ALGO_RSA_PKCS1_SHA384 => ObjectAlgorithm::RsaPkcs1Sha384,
@@ -712,6 +834,7 @@ impl From<ObjectAlgorithm> for yh_algorithm {
             ObjectAlgorithm::Ed25519 => yh_algorithm::YH_ALGO_EC_ED25519,
             ObjectAlgorithm::EcP224 => yh_algorithm::YH_ALGO_EC_P224,
             ObjectAlgorithm::RsaPkcs1Decrypt => yh_algorithm::YH_ALGO_RSA_PKCS1_DECRYPT,
+            ObjectAlgorithm::ANY => yh_algorithm::YH_ALGO_ANY,
         }
     }
 }
@@ -722,7 +845,7 @@ impl<'a> From<&'a ObjectAlgorithm> for yh_algorithm {
     }
 }
 
-impl std::fmt::Display for ObjectAlgorithm {
+impl Display for ObjectAlgorithm {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut ptr: *const std::os::raw::c_char = std::ptr::null();
 
@@ -771,13 +894,35 @@ impl From<yh_object_descriptor> for ObjectDescriptor {
             id: descriptor.id,
             len: descriptor.len,
             domains: ObjectDomain::from_primitive(descriptor.domains),
-            object_type: ObjectType::from(unsafe { &descriptor.type_ }),
-            algorithm: ObjectAlgorithm::from(unsafe { &descriptor.algorithm }),
+            object_type: ObjectType::from(unsafe { descriptor.type_ }),
+            algorithm: ObjectAlgorithm::from(unsafe { descriptor.algorithm }),
             sequence: descriptor.sequence,
             origin: ObjectOrigin::from_primitive(descriptor.origin),
             label: descriptor.label.to_string(),
             delegated_capabilities: delegated,
         }
+    }
+}
+
+impl Display for ObjectDescriptor {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut desc_str = String::new().to_owned();
+        desc_str.push_str(format!("id: 0x{:04x?}\t", self.id).as_str());
+        desc_str.push_str(format!("label: {:40}\t", self.label).as_str());
+        desc_str.push_str(format!("algo: {:10}\t", self.algorithm).as_str());
+
+        desc_str.push_str(format!("seq: {:2}\t", self.sequence).as_str());
+        desc_str.push_str(format!("origin: {:10?}\t", self.origin).as_str());
+        let mut dom_str = String::new().to_owned();
+        self.domains.iter().for_each(|domain| dom_str.push_str(format!("{},", domain).as_str()));
+        desc_str.push_str(format!("domains: {:20}\t", dom_str).as_str());
+        let mut caps_str = String::new().to_owned();
+        self.capabilities.iter().for_each(|cap| caps_str.push_str(format!("{:?},", cap).as_str()));
+        desc_str.push_str(format!("capabilities: {}\t", caps_str).as_str());
+        caps_str = String::new().to_owned();
+        self.delegated_capabilities.iter().for_each(|cap| caps_str.push_str(format!("{:?},", cap).as_str()));
+        desc_str.push_str(format!("delegated capabilities: {:?}\t", caps_str).as_str());
+        write!(f, "{}", desc_str)
     }
 }
 
@@ -792,6 +937,7 @@ impl From<ObjectType> for yh_object_type {
             ObjectType::Template => yh_object_type::YH_TEMPLATE,
             ObjectType::OtpAeadKey => yh_object_type::YH_OTP_AEAD_KEY,
             ObjectType::PublicKey => yh_object_type::YH_PUBLIC_KEY,
+            ObjectType::Any => yh_object_type::YH_ANY,
         }
     }
 }
@@ -802,7 +948,7 @@ impl<'a> From<&'a ObjectType> for yh_object_type {
     }
 }
 
-impl std::fmt::Display for ObjectType {
+impl Display for ObjectType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut ptr: *const std::os::raw::c_char = std::ptr::null();
 
@@ -834,7 +980,7 @@ impl<'a> From<&'a yh_object_descriptor> for ObjectHandle {
                 yh_object_type::YH_TEMPLATE => ObjectType::Template,
                 yh_object_type::YH_OTP_AEAD_KEY => ObjectType::OtpAeadKey,
                 yh_object_type::YH_PUBLIC_KEY => ObjectType::PublicKey,
-                yh_object_type::YH_ANY => unreachable!(),
+                yh_object_type::YH_ANY => ObjectType::Any,
             },
         }
     }

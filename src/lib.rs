@@ -38,17 +38,15 @@ extern crate log;
 extern crate regex;
 extern crate rustc_serialize;
 
-use lyh::{yh_connector, yh_rc, yh_session};
+use std::ffi::c_char;
+use lyh::{yh_algorithm, yh_capabilities, yh_connector, yh_rc, yh_session};
 
-mod error;
+pub mod error;
 use error::Error;
 
 pub mod object;
 
-use object::{
-    AsymmetricKey, ObjectAlgorithm, ObjectCapability, ObjectDescriptor, ObjectDomain, ObjectHandle,
-    OpaqueObject,
-};
+use object::{AsymmetricKey, ObjectAlgorithm, ObjectCapability, ObjectDescriptor, ObjectDomain, ObjectHandle, ObjectType, OpaqueObject};
 
 pub mod otp;
 
@@ -80,7 +78,7 @@ pub struct DeviceInfo {
     /// Used log entries
     log_used: u8,
     /// Supported algorihms
-    algorithms: Vec<lyh::yh_algorithm>,
+    algorithms: Vec<yh_algorithm>,
 }
 
 /// Initialize libyubihsm
@@ -231,7 +229,13 @@ impl Session {
 
     /// List objects on the device
     pub fn list_objects(&self) -> Result<Vec<ObjectHandle>, Error> {
-        let capa = lyh::yh_capabilities {
+        self.list_objects_with_filter(0, ObjectType::Any, "", ObjectAlgorithm::ANY)
+    }
+
+    /// List objects on the device
+    pub fn list_objects_with_filter(&self, obj_id:u16, obj_type:ObjectType, label:&str, algorithm:ObjectAlgorithm) -> Result<Vec<ObjectHandle>, Error> {
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+        let capa = yh_capabilities {
             capabilities: [0u8; 8],
         };
         let descriptor = lyh::yh_object_descriptor::default();
@@ -241,12 +245,12 @@ impl Session {
         let res = unsafe {
             lyh::yh_util_list_objects(
                 self.ptr,
-                0,
-                lyh::yh_object_type::YH_ANY,
+                obj_id,
+                lyh::yh_object_type::from(obj_type),
                 0,
                 &capa,
-                lyh::yh_algorithm::YH_ALGO_ANY,
-                std::ptr::null(),
+                lyh::yh_algorithm::from(algorithm),
+                c_str.as_ptr(),
                 objects.as_mut_ptr(),
                 &mut n_objects,
             )
@@ -264,7 +268,7 @@ impl Session {
     pub fn get_object_info(
         &self,
         id: u16,
-        object_type: object::ObjectType,
+        object_type: ObjectType,
     ) -> Result<ObjectDescriptor, Error> {
         let mut descriptor = lyh::yh_object_descriptor::default();
 
@@ -278,7 +282,7 @@ impl Session {
     }
 
     /// Delete an object
-    pub fn delete_object(&self, id: u16, object_type: object::ObjectType) -> Result<(), Error> {
+    pub fn delete_object(&self, id: u16, object_type: ObjectType) -> Result<(), Error> {
         let res = unsafe { lyh::yh_util_delete_object(self.ptr, id, object_type.into()) };
 
         try!(error::result_from_libyh(res));
@@ -365,6 +369,132 @@ impl Session {
         Ok(real_id)
     }
 
+
+    #[allow(clippy::too_many_arguments)]
+    /// Import a RSA key
+    pub fn import_rsa_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        object_capabilities: &[ObjectCapability],
+        algorithm: ObjectAlgorithm,
+        p: &[u8],
+        q: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_rsa_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(object_capabilities),
+                algorithm.into(),
+                p.as_ptr(),
+                q.as_ptr(),
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        Ok(real_id)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    /// Import a EC key
+    pub fn import_ec_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        object_capabilities: &[ObjectCapability],
+        algorithm: ObjectAlgorithm,
+        s: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_ec_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(object_capabilities),
+                algorithm.into(),
+                s.as_ptr(),
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        Ok(real_id)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    /// Import a ED key
+    pub fn import_ed_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        object_capabilities: &[ObjectCapability],
+        k: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_ec_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(object_capabilities),
+                yh_algorithm::YH_ALGO_EC_ED25519,
+                k.as_ptr(),
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        Ok(real_id)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    /// Import an X509Certificate
+    pub fn import_cert(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        cert: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+        let capabilities:[ObjectCapability; 0] = [];
+
+        let res = unsafe {
+            lyh::yh_util_import_opaque(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(&capabilities),
+                yh_algorithm::YH_ALGO_OPAQUE_X509_CERTIFICATE,
+                cert.as_ptr(),
+                cert.len(),
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        Ok(real_id)
+    }
+
     /// Factory reset the device
     pub fn reset(&self) -> Result<(), Error> {
         let res = unsafe { lyh::yh_util_reset_device(self.ptr) };
@@ -379,7 +509,7 @@ impl Session {
     pub fn export_wrapped(
         &self,
         wrapping_key_id: u16,
-        target_type: object::ObjectType,
+        target_type: ObjectType,
         target_id: u16,
     ) -> Result<Vec<u8>, Error> {
         let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
@@ -475,9 +605,21 @@ impl Session {
         domains: &[ObjectDomain],
         key_algorithm: ObjectAlgorithm,
     ) -> Result<AsymmetricKey, Error> {
+        let mut key_id: u16 = 0;
+        self.generate_asymmetric_key_with_keyid(key_id, label, capabilities, domains, key_algorithm)
+    }
+
+    /// Generate a new asymmetric key with set ID
+    pub fn generate_asymmetric_key_with_keyid(
+        &self,
+        mut key_id: u16,
+        label: &str,
+        capabilities: &[ObjectCapability],
+        domains: &[ObjectDomain],
+        key_algorithm: ObjectAlgorithm,
+    ) -> Result<AsymmetricKey, Error> {
         let c_str = ::std::ffi::CString::new(label).unwrap();
 
-        let mut key_id: u16 = 0;
         if unsafe { lyh::yh_is_rsa(key_algorithm.into()) } {
             let res = unsafe {
                 lyh::yh_util_generate_rsa_key(
@@ -975,6 +1117,47 @@ mod test {
 
         let key = session
             .generate_asymmetric_key(
+                "Test key generation",
+                &capabilities,
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                ObjectAlgorithm::Rsa2048,
+            )
+            .unwrap();
+
+        session.close().unwrap();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let info = session.get_object_info(key.get_key_id(), ObjectType::AsymmetricKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session
+            .delete_object(key.get_key_id(), ObjectType::AsymmetricKey)
+            .unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    fn generate_asymmetric_key_with_keyid() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let capabilities = vec![
+            ObjectCapability::SignPkcs,
+            ObjectCapability::SignPss,
+            ObjectCapability::SignAttestationCertificate,
+        ];
+
+        let key = session
+            .generate_asymmetric_key_with_keyid(
+                0,
                 "Test key generation",
                 &capabilities,
                 &ObjectDomain::vec_from_str("all").unwrap(),
