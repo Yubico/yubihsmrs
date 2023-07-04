@@ -670,6 +670,32 @@ impl Session {
         ))
     }
 
+    /// Get the public key
+    pub fn get_pubkey(
+        &self,
+        key_id: u16,
+    ) -> Result<(Vec<u8>, ObjectAlgorithm), Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+        let mut key_algorithm = yh_algorithm::YH_ALGO_ANY;
+
+        let res = unsafe {
+            lyh::yh_util_get_public_key(
+                self.ptr,
+                key_id,
+                out.as_mut_ptr(),
+                &mut out_len,
+                &mut key_algorithm,
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok((out_vec, key_algorithm.into()))
+    }
+
     /// Sign data using RSA-PKCS#1v1.5
     pub fn sign_pkcs1v1_5(
         &self,
@@ -783,6 +809,66 @@ impl Session {
 
         Ok(out_vec)
     }
+
+    /// Decrypt data using RSA-PKCS#1v1.5
+    pub fn decrypt_pkcs1v1_5(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_decrypt_pkcs1v1_5(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Decrypt data using RSA-OAEP
+    pub fn decrypt_oaep(
+        &self,
+        key_id: u16,
+        data: &[u8],
+        label: &[u8],
+        mgf1algo: ObjectAlgorithm,
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_decrypt_oaep(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+                label.as_ptr(),
+                label.len(),
+                mgf1algo.into(),
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
 }
 
 impl Drop for Session {
