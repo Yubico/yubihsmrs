@@ -185,7 +185,7 @@ pub enum ObjectDomain {
     Sixteen,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 /// Object algorithms
 pub enum ObjectAlgorithm {
     /// RSA PKCS1v1.5 with SHA1
