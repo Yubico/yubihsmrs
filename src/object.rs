@@ -28,7 +28,7 @@ use std::fmt::Display;
 
 use Session;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 /// Object types
 pub enum ObjectType {
     /// Opaque object
@@ -909,19 +909,21 @@ impl Display for ObjectDescriptor {
         let mut desc_str = String::new().to_owned();
         desc_str.push_str(format!("id: 0x{:04x?}\t", self.id).as_str());
         desc_str.push_str(format!("label: {:40}\t", self.label).as_str());
-        desc_str.push_str(format!("algo: {:10}\t", self.algorithm).as_str());
+        desc_str.push_str(format!("algo: {:24}\t", self.algorithm).as_str());
 
         desc_str.push_str(format!("seq: {:2}\t", self.sequence).as_str());
-        desc_str.push_str(format!("origin: {:10?}\t", self.origin).as_str());
+        desc_str.push_str(format!("origin: {:17?}\t", self.origin).as_str());
         let mut dom_str = String::new().to_owned();
         self.domains.iter().for_each(|domain| dom_str.push_str(format!("{},", domain).as_str()));
-        desc_str.push_str(format!("domains: {:20}\t", dom_str).as_str());
+        desc_str.push_str(format!("domains: {:40}\t", dom_str).as_str());
         let mut caps_str = String::new().to_owned();
         self.capabilities.iter().for_each(|cap| caps_str.push_str(format!("{:?},", cap).as_str()));
         desc_str.push_str(format!("capabilities: {}\t", caps_str).as_str());
-        caps_str = String::new().to_owned();
-        self.delegated_capabilities.iter().for_each(|cap| caps_str.push_str(format!("{:?},", cap).as_str()));
-        desc_str.push_str(format!("delegated capabilities: {:?}\t", caps_str).as_str());
+        if self.object_type==ObjectType::AuthenticationKey || self.object_type==ObjectType::WrapKey {
+            caps_str = String::new().to_owned();
+            self.delegated_capabilities.iter().for_each(|cap| caps_str.push_str(format!("{:?},", cap).as_str()));
+            desc_str.push_str(format!("delegated capabilities: {:?}\t", caps_str).as_str());
+        }
         write!(f, "{}", desc_str)
     }
 }
@@ -983,6 +985,12 @@ impl<'a> From<&'a yh_object_descriptor> for ObjectHandle {
                 yh_object_type::YH_ANY => ObjectType::Any,
             },
         }
+    }
+}
+
+impl Display for ObjectHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "0x{:x}   {}", self.object_id, self.object_type)
     }
 }
 
