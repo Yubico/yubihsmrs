@@ -869,6 +869,33 @@ impl Session {
         Ok(out_vec)
     }
 
+    /// Derive ECDH
+    pub fn derive_ecdh(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_derive_ecdh(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
 }
 
 impl Drop for Session {
