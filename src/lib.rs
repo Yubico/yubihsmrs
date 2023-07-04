@@ -229,15 +229,16 @@ impl Session {
 
     /// List objects on the device
     pub fn list_objects(&self) -> Result<Vec<ObjectHandle>, Error> {
-        self.list_objects_with_filter(0, ObjectType::Any, "", ObjectAlgorithm::ANY)
+        let capabilities:Vec<ObjectCapability> = Vec::new();
+        self.list_objects_with_filter(0, ObjectType::Any, "", ObjectAlgorithm::ANY, &capabilities)
     }
 
     /// List objects on the device
-    pub fn list_objects_with_filter(&self, obj_id:u16, obj_type:ObjectType, label:&str, algorithm:ObjectAlgorithm) -> Result<Vec<ObjectHandle>, Error> {
+    pub fn list_objects_with_filter(&self, obj_id:u16, obj_type:ObjectType, label:&str, algorithm:ObjectAlgorithm, object_capabilities: &[ObjectCapability]) -> Result<Vec<ObjectHandle>, Error> {
         let c_str = ::std::ffi::CString::new(label).unwrap();
-        let capa = yh_capabilities {
+        /*let capa = yh_capabilities {
             capabilities: [0u8; 8],
-        };
+        };*/
         let descriptor = lyh::yh_object_descriptor::default();
         let mut objects = vec![descriptor; 512].into_boxed_slice();
         let mut n_objects = 512;
@@ -248,7 +249,7 @@ impl Session {
                 obj_id,
                 lyh::yh_object_type::from(obj_type),
                 0,
-                &capa,
+                &ObjectCapability::primitive_from_slice(object_capabilities),
                 lyh::yh_algorithm::from(algorithm),
                 c_str.as_ptr(),
                 objects.as_mut_ptr(),
@@ -667,6 +668,120 @@ impl Session {
             capabilities.to_vec(),
             domains.to_vec(),
         ))
+    }
+
+    /// Sign data using RSA-PKCS#1v1.5
+    pub fn sign_pkcs1v1_5(
+        &self,
+        key_id: u16,
+        hashed: bool,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_sign_pkcs1v1_5(
+                self.ptr,
+                key_id,
+                hashed,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Sign data using RSA-PSS
+    pub fn sign_pss(
+        &self,
+        key_id: u16,
+        salt_len: usize,
+        mgf1algo: ObjectAlgorithm,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_sign_pss(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+                salt_len,
+                mgf1algo.into(),
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Sign data using ECDSA
+    pub fn sign_ecdsa(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_sign_ecdsa(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Sign data using EDDSA
+    pub fn sign_eddsa(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_sign_eddsa(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
     }
 }
 
