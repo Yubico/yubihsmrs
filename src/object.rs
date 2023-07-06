@@ -51,7 +51,7 @@ pub enum ObjectType {
     Any,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 /// Object capabilities
 pub enum ObjectCapability {
     /// Get opaque object
@@ -916,13 +916,15 @@ impl Display for ObjectDescriptor {
         let mut dom_str = String::new().to_owned();
         self.domains.iter().for_each(|domain| dom_str.push_str(format!("{},", domain).as_str()));
         desc_str.push_str(format!("domains: {:40}\t", dom_str).as_str());
+
         let mut caps_str = String::new().to_owned();
         self.capabilities.iter().for_each(|cap| caps_str.push_str(format!("{:?},", cap).as_str()));
         desc_str.push_str(format!("capabilities: {}\t", caps_str).as_str());
+
         if self.object_type==ObjectType::AuthenticationKey || self.object_type==ObjectType::WrapKey {
             caps_str = String::new().to_owned();
             self.delegated_capabilities.iter().for_each(|cap| caps_str.push_str(format!("{:?},", cap).as_str()));
-            desc_str.push_str(format!("delegated capabilities: {:?}\t", caps_str).as_str());
+            desc_str.push_str(format!("delegated capabilities: {}\t", caps_str).as_str());
         }
         write!(f, "{}", desc_str)
     }
