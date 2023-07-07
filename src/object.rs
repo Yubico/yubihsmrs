@@ -51,7 +51,7 @@ pub enum ObjectType {
     Any,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq, std::hash::Hash)]
 /// Object capabilities
 pub enum ObjectCapability {
     /// Get opaque object
