@@ -336,6 +336,37 @@ impl Session {
         Ok(real_id)
     }
 
+    /// Generate a wrapkey
+    pub fn generate_wrap_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        object_capabilities: &[ObjectCapability],
+        algorithm: ObjectAlgorithm,
+        delegated_capabilities: &[ObjectCapability],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_generate_wrap_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(object_capabilities),
+                algorithm.into(),
+                &ObjectCapability::primitive_from_slice(delegated_capabilities),
+            )
+        };
+        try!(error::result_from_libyh(res));
+
+        Ok(real_id)
+    }
+
+
     #[allow(clippy::too_many_arguments)]
     /// Import a wrapkey
     pub fn import_wrap_key(
