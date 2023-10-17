@@ -28,12 +28,15 @@ use std::fmt::Display;
 
 use Session;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 /// Object types
 pub enum ObjectType {
     /// Opaque object
     Opaque,
     /// Authentication key
+    #[default]
     AuthenticationKey,
     /// Asymmetric key
     AsymmetricKey,
@@ -51,7 +54,7 @@ pub enum ObjectType {
     Any,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, std::hash::Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Default, std::hash::Hash, Serialize, Deserialize)]
 /// Object capabilities
 pub enum ObjectCapability {
     /// Get opaque object
@@ -87,6 +90,7 @@ pub enum ObjectCapability {
     /// Generate a wrap key
     GenerateWrapKey,
     /// Object is exportable under wrap
+    #[default]
     ExportableUnderWrap,
     /// Set option
     SetOption,
@@ -148,7 +152,7 @@ pub enum ObjectCapability {
     DeleteOtpAeadKey,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /// Object domains
 pub enum ObjectDomain {
     /// Domain one
@@ -185,7 +189,7 @@ pub enum ObjectDomain {
     Sixteen,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 /// Object algorithms
 pub enum ObjectAlgorithm {
     /// RSA PKCS1v1.5 with SHA1
@@ -205,6 +209,7 @@ pub enum ObjectAlgorithm {
     /// RSA PSS with SHA512
     RsaPssSha512,
     /// RSA 2048
+    #[default]
     Rsa2048,
     /// RSA 3072
     Rsa3072,
@@ -288,10 +293,11 @@ pub enum ObjectAlgorithm {
     ANY,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 /// Object origin
 pub enum ObjectOrigin {
     /// Generate object
+    #[default]
     Generated,
     /// Imported object
     Imported,
@@ -301,7 +307,7 @@ pub enum ObjectOrigin {
     WrappedImported,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 /// Object descriptor
 pub struct ObjectDescriptor {
     /// Ccapabilities
@@ -326,7 +332,7 @@ pub struct ObjectDescriptor {
     pub delegated_capabilities: Option<Vec<ObjectCapability>>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 /// Object Handle
 pub struct ObjectHandle {
     /// Type

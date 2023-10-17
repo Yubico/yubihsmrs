@@ -35,6 +35,7 @@ regex = "0.2.2"
 rustc-serialize = "0.3.24"
 strum = "0.24"
 strum_macros = "0.24"
+serde = { version = "1.0.164", features = ["derive"] }
 
 [dev-dependencies]
 base64 = "0.7.0"

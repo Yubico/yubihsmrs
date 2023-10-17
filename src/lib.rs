@@ -38,6 +38,8 @@ extern crate log;
 extern crate regex;
 extern crate rustc_serialize;
 
+extern crate serde;
+
 use std::ffi::c_char;
 use lyh::{yh_algorithm, yh_capabilities, yh_connector, yh_rc, yh_session};
 
@@ -311,7 +313,7 @@ impl Session {
         id: u16,
         label: &str,
         domains: &[ObjectDomain],
-        object_capabilities: &[ObjectCapability],
+        capabilities: &[ObjectCapability],
         delegated_capabilities: &[ObjectCapability],
         password: &[u8],
     ) -> Result<u16, Error> {
@@ -325,7 +327,7 @@ impl Session {
                 &mut real_id,
                 c_str.as_ptr(),
                 ObjectDomain::primitive_from_slice(domains),
-                &ObjectCapability::primitive_from_slice(object_capabilities),
+                &ObjectCapability::primitive_from_slice(capabilities),
                 &ObjectCapability::primitive_from_slice(delegated_capabilities),
                 password.as_ptr(),
                 password.len(),
@@ -342,7 +344,7 @@ impl Session {
         id: u16,
         label: &str,
         domains: &[ObjectDomain],
-        object_capabilities: &[ObjectCapability],
+        capabilities: &[ObjectCapability],
         algorithm: ObjectAlgorithm,
         delegated_capabilities: &[ObjectCapability],
     ) -> Result<u16, Error> {
@@ -356,7 +358,7 @@ impl Session {
                 &mut real_id,
                 c_str.as_ptr(),
                 ObjectDomain::primitive_from_slice(domains),
-                &ObjectCapability::primitive_from_slice(object_capabilities),
+                &ObjectCapability::primitive_from_slice(capabilities),
                 algorithm.into(),
                 &ObjectCapability::primitive_from_slice(delegated_capabilities),
             )
@@ -374,7 +376,7 @@ impl Session {
         id: u16,
         label: &str,
         domains: &[ObjectDomain],
-        object_capabilities: &[ObjectCapability],
+        capabilities: &[ObjectCapability],
         algorithm: ObjectAlgorithm,
         delegated_capabilities: &[ObjectCapability],
         wrapkey: &[u8],
@@ -389,7 +391,7 @@ impl Session {
                 &mut real_id,
                 c_str.as_ptr(),
                 ObjectDomain::primitive_from_slice(domains),
-                &ObjectCapability::primitive_from_slice(object_capabilities),
+                &ObjectCapability::primitive_from_slice(capabilities),
                 algorithm.into(),
                 &ObjectCapability::primitive_from_slice(delegated_capabilities),
                 wrapkey.as_ptr(),
@@ -409,7 +411,7 @@ impl Session {
         id: u16,
         label: &str,
         domains: &[ObjectDomain],
-        object_capabilities: &[ObjectCapability],
+        capabilities: &[ObjectCapability],
         algorithm: ObjectAlgorithm,
         p: &[u8],
         q: &[u8],
@@ -424,7 +426,7 @@ impl Session {
                 &mut real_id,
                 c_str.as_ptr(),
                 ObjectDomain::primitive_from_slice(domains),
-                &ObjectCapability::primitive_from_slice(object_capabilities),
+                &ObjectCapability::primitive_from_slice(capabilities),
                 algorithm.into(),
                 p.as_ptr(),
                 q.as_ptr(),
@@ -442,7 +444,7 @@ impl Session {
         id: u16,
         label: &str,
         domains: &[ObjectDomain],
-        object_capabilities: &[ObjectCapability],
+        capabilities: &[ObjectCapability],
         algorithm: ObjectAlgorithm,
         s: &[u8],
     ) -> Result<u16, Error> {
@@ -456,7 +458,7 @@ impl Session {
                 &mut real_id,
                 c_str.as_ptr(),
                 ObjectDomain::primitive_from_slice(domains),
-                &ObjectCapability::primitive_from_slice(object_capabilities),
+                &ObjectCapability::primitive_from_slice(capabilities),
                 algorithm.into(),
                 s.as_ptr(),
             )
@@ -473,7 +475,7 @@ impl Session {
         id: u16,
         label: &str,
         domains: &[ObjectDomain],
-        object_capabilities: &[ObjectCapability],
+        capabilities: &[ObjectCapability],
         k: &[u8],
     ) -> Result<u16, Error> {
         let mut real_id = id;
@@ -486,7 +488,7 @@ impl Session {
                 &mut real_id,
                 c_str.as_ptr(),
                 ObjectDomain::primitive_from_slice(domains),
-                &ObjectCapability::primitive_from_slice(object_capabilities),
+                &ObjectCapability::primitive_from_slice(capabilities),
                 yh_algorithm::YH_ALGO_EC_ED25519,
                 k.as_ptr(),
             )
@@ -503,12 +505,12 @@ impl Session {
         id: u16,
         label: &str,
         domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
         cert: &[u8],
     ) -> Result<u16, Error> {
         let mut real_id = id;
 
         let c_str = ::std::ffi::CString::new(label).unwrap();
-        let capabilities:[ObjectCapability; 0] = [];
 
         let res = unsafe {
             lyh::yh_util_import_opaque(
