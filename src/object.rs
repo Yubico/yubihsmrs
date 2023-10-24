@@ -470,7 +470,7 @@ impl Display for ObjectCapability {
             ObjectCapability::SignEddsa => write!(f, "Compute digital signatures using EDDSA"),
             ObjectCapability::DecryptPkcs => write!(f, "Decrypt data using RSA-PKCS1v1.5"),
             ObjectCapability::DecryptOaep => write!(f, "Decrypt data using RSA-OAEP"),
-            ObjectCapability::DeriveEcdh => write!(f, "Perform ECDH"),
+            ObjectCapability::DeriveEcdh => write!(f, "Derive ECDH"),
             ObjectCapability::ExportWrapped => write!(f, "Export other Objects under wrap"),
             ObjectCapability::ImportWrapped => write!(f, "Import wrapped Objects"),
             ObjectCapability::PutWrapKey => write!(f, "Import Wrap Key Objects"),
@@ -644,9 +644,9 @@ impl ObjectDomain {
 
         let c_str = ::std::ffi::CString::new(domains).unwrap();
 
-        try!(::error::result_from_libyh(unsafe {
+        ::error::result_from_libyh(unsafe {
             lyh::yh_string_to_domains(c_str.as_ptr(), &mut primitive)
-        }));
+        })?;
 
         Ok(ObjectDomain::from_primitive(primitive))
     }
@@ -857,16 +857,16 @@ impl Display for ObjectAlgorithm {
 
         let a: yh_algorithm = self.into();
 
-        try!(unsafe {
+        unsafe {
             ::error::result_from_libyh(lyh::yh_algo_to_string(a, &mut ptr))
                 .map_err(|_| std::fmt::Error)
-        });
+        }?;
 
-        let cstr = try!(unsafe {
+        let cstr = unsafe {
             std::ffi::CStr::from_ptr(ptr)
                 .to_str()
                 .map_err(|_| std::fmt::Error)
-        });
+        }?;
 
         write!(f, "{}", cstr)
     }
@@ -900,8 +900,8 @@ impl From<yh_object_descriptor> for ObjectDescriptor {
             id: descriptor.id,
             len: descriptor.len,
             domains: ObjectDomain::from_primitive(descriptor.domains),
-            object_type: ObjectType::from(unsafe { descriptor.type_ }),
-            algorithm: ObjectAlgorithm::from(unsafe { descriptor.algorithm }),
+            object_type: ObjectType::from(descriptor.type_),
+            algorithm: ObjectAlgorithm::from(descriptor.algorithm),
             sequence: descriptor.sequence,
             origin: ObjectOrigin::from_primitive(descriptor.origin),
             label: descriptor.label.to_string(),
@@ -962,16 +962,16 @@ impl Display for ObjectType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut ptr: *const std::os::raw::c_char = std::ptr::null();
 
-        try!(unsafe {
+        unsafe {
             ::error::result_from_libyh(lyh::yh_type_to_string(self.into(), &mut ptr))
                 .map_err(|_| std::fmt::Error)
-        });
+        }?;
 
-        let cstr = try!(unsafe {
+        let cstr = unsafe {
             std::ffi::CStr::from_ptr(ptr)
                 .to_str()
                 .map_err(|_| std::fmt::Error)
-        });
+        }?;
 
         write!(f, "{}", cstr)
     }
@@ -1094,9 +1094,9 @@ impl FromStr for ObjectAlgorithm {
     fn from_str(algorithm: &str) -> Result<Self, Self::Err> {
         let mut algo = yh_algorithm::YH_ALGO_ANY;
         let c_str = ::std::ffi::CString::new(algorithm).unwrap();
-        try!(::error::result_from_libyh(unsafe {
+        ::error::result_from_libyh(unsafe {
             lyh::yh_string_to_algo(c_str.as_ptr(), &mut algo)
-        }));
+        })?;
         Ok(ObjectAlgorithm::from(&algo))
     }
 }
@@ -1176,7 +1176,7 @@ impl AsymmetricKey {
                 &mut out_len,
             )
         };
-        try!(::error::result_from_libyh(res));
+        ::error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);
