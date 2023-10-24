@@ -40,8 +40,8 @@ extern crate rustc_serialize;
 
 extern crate serde;
 
-use std::ffi::c_char;
-use lyh::{yh_algorithm, yh_capabilities, yh_connector, yh_rc, yh_session};
+use std::fmt::Display;
+use lyh::{yh_algorithm, yh_connector, yh_rc, yh_session};
 
 pub mod error;
 use error::Error;
@@ -83,6 +83,20 @@ pub struct DeviceInfo {
     algorithms: Vec<yh_algorithm>,
 }
 
+impl Display for DeviceInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut info = String::new().to_owned();
+        info.push_str(format!("Version number:\t\t {}.{}.{}\n", self.major, self.minor, self.patch).as_str());
+        info.push_str(format!("Serial number:\t\t {}\n", self.serial).as_str());
+        info.push_str(format!("Log used:\t\t {}/{}\n", self.log_used, self.log_total).as_str());
+
+        let mut algo_str = String::new().to_owned();
+        self.algorithms.iter().for_each(|a| algo_str.push_str(format!("{},", ObjectAlgorithm::from(a)).as_str()));
+        info.push_str(format!("Supported algorithms:\t {}\t", algo_str).as_str());
+        write!(f, "{}", info)
+    }
+}
+
 /// Initialize libyubihsm
 pub fn init() -> Result<(), Error> {
     // TODO(adma): possibly hide this behind fnOnce
@@ -101,9 +115,9 @@ impl YubiHsm {
         let connector_ptr: *mut yh_connector = ::std::ptr::null_mut();
         let c_url = ::std::ffi::CString::new(url).unwrap();
 
-        try!(error::result_from_libyh(unsafe {
+        error::result_from_libyh(unsafe {
             lyh::yh_init_connector(c_url.as_ptr(), &connector_ptr)
-        }));
+        })?;
 
         error::result_from_libyh(unsafe { lyh::yh_connect(connector_ptr) }).and(Ok(YubiHsm {
             connector: connector_ptr,
@@ -119,7 +133,7 @@ impl YubiHsm {
     ) -> Result<Session, Error> {
         let session_ptr: *mut yh_session = ::std::ptr::null_mut();
 
-        try!(error::result_from_libyh(unsafe {
+        error::result_from_libyh(unsafe {
             lyh::yh_create_session_derived(
                 self.connector,
                 key_id,
@@ -131,7 +145,7 @@ impl YubiHsm {
         })
         .and(error::result_from_libyh(unsafe {
             lyh::yh_authenticate_session(session_ptr)
-        })));
+        }))?;
 
         Ok(Session { ptr: session_ptr })
     }
@@ -163,7 +177,7 @@ impl YubiHsm {
             );
         }
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(DeviceInfo {
             major,
@@ -259,7 +273,7 @@ impl Session {
             )
         };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(objects[0..n_objects]
             .iter()
@@ -279,7 +293,7 @@ impl Session {
             lyh::yh_util_get_object_info(self.ptr, id, object_type.into(), &mut descriptor)
         };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(ObjectDescriptor::from(descriptor))
     }
@@ -288,7 +302,7 @@ impl Session {
     pub fn delete_object(&self, id: u16, object_type: ObjectType) -> Result<(), Error> {
         let res = unsafe { lyh::yh_util_delete_object(self.ptr, id, object_type.into()) };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(())
     }
@@ -302,7 +316,7 @@ impl Session {
             lyh::yh_util_get_pseudo_random(self.ptr, count, bytes.as_mut_ptr(), &mut returned)
         };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(bytes.into_vec())
     }
@@ -333,7 +347,7 @@ impl Session {
                 password.len(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(real_id)
     }
@@ -363,7 +377,7 @@ impl Session {
                 &ObjectCapability::primitive_from_slice(delegated_capabilities),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(real_id)
     }
@@ -398,7 +412,7 @@ impl Session {
                 wrapkey.len(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(real_id)
     }
@@ -432,7 +446,7 @@ impl Session {
                 q.as_ptr(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(real_id)
     }
@@ -463,7 +477,7 @@ impl Session {
                 s.as_ptr(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(real_id)
     }
@@ -493,7 +507,7 @@ impl Session {
                 k.as_ptr(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(real_id)
     }
@@ -524,7 +538,7 @@ impl Session {
                 cert.len(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(real_id)
     }
@@ -559,7 +573,7 @@ impl Session {
                 &mut out_len,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);
@@ -586,7 +600,7 @@ impl Session {
                 &mut id,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(ObjectHandle {
             object_id: id,
@@ -620,7 +634,7 @@ impl Session {
                 bytes.len(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(OpaqueObject::new(
             id,
@@ -639,7 +653,7 @@ impl Session {
         domains: &[ObjectDomain],
         key_algorithm: ObjectAlgorithm,
     ) -> Result<AsymmetricKey, Error> {
-        let mut key_id: u16 = 0;
+        let key_id: u16 = 0;
         self.generate_asymmetric_key_with_keyid(key_id, label, capabilities, domains, key_algorithm)
     }
 
@@ -665,7 +679,7 @@ impl Session {
                     key_algorithm.into(),
                 )
             };
-            try!(::error::result_from_libyh(res));
+            ::error::result_from_libyh(res)?;
         } else if unsafe { lyh::yh_is_ec(key_algorithm.into()) } {
             let res = unsafe {
                 lyh::yh_util_generate_ec_key(
@@ -677,7 +691,7 @@ impl Session {
                     key_algorithm.into(),
                 )
             };
-            try!(::error::result_from_libyh(res));
+            ::error::result_from_libyh(res)?;
         } else if unsafe { lyh::yh_is_ed(key_algorithm.into()) } {
             let res = unsafe {
                 lyh::yh_util_generate_ed_key(
@@ -689,7 +703,7 @@ impl Session {
                     key_algorithm.into(),
                 )
             };
-            try!(error::result_from_libyh(res));
+            error::result_from_libyh(res)?;
         } else {
             return Err(Error::InvalidParameter("Key algorithm".to_string()));
         }
@@ -721,7 +735,7 @@ impl Session {
                 &mut key_algorithm,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);
@@ -750,7 +764,7 @@ impl Session {
                 &mut out_len,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);
@@ -781,7 +795,7 @@ impl Session {
                 mgf1algo.into(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);
@@ -808,7 +822,7 @@ impl Session {
                 &mut out_len,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);
@@ -835,7 +849,7 @@ impl Session {
                 &mut out_len,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);
@@ -862,7 +876,7 @@ impl Session {
                 &mut out_len,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);
@@ -894,7 +908,7 @@ impl Session {
                 mgf1algo.into(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);
@@ -921,7 +935,7 @@ impl Session {
                 &mut out_len,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);

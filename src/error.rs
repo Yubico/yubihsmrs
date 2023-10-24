@@ -44,6 +44,7 @@ impl fmt::Display for Error {
 }
 
 impl error::Error for Error {
+    /*
     fn description(&self) -> &str {
         match *self {
             Error::LibYubiHsm(ref err) => err.description(),
@@ -51,7 +52,7 @@ impl error::Error for Error {
             Error::InvalidParameter(_) => "Invalid parameter",
         }
     }
-
+    */
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             Error::LibYubiHsm(ref err) => Some(err),
