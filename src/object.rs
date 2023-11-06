@@ -22,6 +22,7 @@ use lyh::{yh_algorithm, yh_capabilities, yh_object_descriptor, yh_object_type};
 use error::Error;
 
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::str::FromStr;
 use std::fmt;
 use std::fmt::Display;
@@ -152,10 +153,11 @@ pub enum ObjectCapability {
     DeleteOtpAeadKey,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 /// Object domains
 pub enum ObjectDomain {
     /// Domain one
+    #[default]
     One,
     /// Domain two
     Two,
@@ -675,6 +677,31 @@ impl ObjectDomain {
         let primitive = (u16::from(domains[0]) << 8) | u16::from(domains[1]);
 
         Ok(ObjectDomain::from_primitive(primitive))
+    }
+}
+
+impl TryFrom<u16> for ObjectDomain {
+    type Error = Error;
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(ObjectDomain::One),
+            2 => Ok(ObjectDomain::Two),
+            3 => Ok(ObjectDomain::Three),
+            4 => Ok(ObjectDomain::Four),
+            5 => Ok(ObjectDomain::Five),
+            6 => Ok(ObjectDomain::Six),
+            7 => Ok(ObjectDomain::Seven),
+            8 => Ok(ObjectDomain::Eight),
+            9 => Ok(ObjectDomain::Nine),
+            10 => Ok(ObjectDomain::Ten),
+            11 => Ok(ObjectDomain::Eleven),
+            12 => Ok(ObjectDomain::Twelve),
+            13 => Ok(ObjectDomain::Thirteen),
+            14 => Ok(ObjectDomain::Fourteen),
+            15 => Ok(ObjectDomain::Fifteen),
+            16 => Ok(ObjectDomain::Sixteen),
+            _ => Err(Error::InvalidParameter("There are only domains 1 to 16".to_string()))
+        }
     }
 }
 

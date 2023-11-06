@@ -88,7 +88,7 @@ impl Display for DeviceInfo {
         let mut info = String::new().to_owned();
         info.push_str(format!("Version number:\t\t {}.{}.{}\n", self.major, self.minor, self.patch).as_str());
         info.push_str(format!("Serial number:\t\t {}\n", self.serial).as_str());
-        info.push_str(format!("Log used:\t\t {}/{}\n", self.log_used, self.log_total).as_str());
+        info.push_str(format!("Log used:\t\t\t {}/{}\n", self.log_used, self.log_total).as_str());
 
         let mut algo_str = String::new().to_owned();
         self.algorithms.iter().for_each(|a| algo_str.push_str(format!("{},", ObjectAlgorithm::from(a)).as_str()));
