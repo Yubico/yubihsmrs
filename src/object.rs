@@ -570,7 +570,8 @@ impl ObjectCapability {
 }
 
 impl ObjectDomain {
-    fn from_primitive(domains: u16) -> Vec<Self> {
+    /// Create ObjectDomain from a u16
+    pub fn from_primitive(domains: u16) -> Vec<Self> {
         let mut v = Vec::new();
 
         if domains & 1 != 0 {
