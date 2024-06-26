@@ -291,6 +291,20 @@ pub enum ObjectAlgorithm {
     EcP224,
     /// RSA PKCS1v1.5 decrypt
     RsaPkcs1Decrypt,
+    /// Yubico EC-P256 authentication
+    Ecp256YubicoAuthentication,
+    /// aes128
+    Aes128,
+    /// aes192
+    Aes192,
+    /// aes256
+    Aes256,
+    /// aes-ecb
+    AesEcb,
+    /// aes-cbc
+    AesCbc,
+    /// aes-kwp
+    AesKwp,
     /// Any algorithms
     ANY,
 }
@@ -707,7 +721,7 @@ impl TryFrom<u16> for ObjectDomain {
 }
 
 impl Display for ObjectDomain {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             ObjectDomain::One => write!(f, "1"),
             ObjectDomain::Two => write!(f, "2"),
@@ -805,6 +819,13 @@ impl From<yh_algorithm> for ObjectAlgorithm {
             yh_algorithm::YH_ALGO_EC_ED25519 => ObjectAlgorithm::Ed25519,
             yh_algorithm::YH_ALGO_EC_P224 => ObjectAlgorithm::EcP224,
             yh_algorithm::YH_ALGO_RSA_PKCS1_DECRYPT => ObjectAlgorithm::RsaPkcs1Decrypt,
+            yh_algorithm::YH_ALGO_EC_P256_YUBICO_AUTHENTICATION => ObjectAlgorithm::Ecp256YubicoAuthentication,
+            yh_algorithm::YH_ALGO_AES128 => ObjectAlgorithm::Aes128,
+            yh_algorithm::YH_ALGO_AES192 => ObjectAlgorithm::Aes192,
+            yh_algorithm::YH_ALGO_AES256 => ObjectAlgorithm::Aes256,
+            yh_algorithm::YH_ALGO_AES_ECB => ObjectAlgorithm::AesEcb,
+            yh_algorithm::YH_ALGO_AES_CBC => ObjectAlgorithm::AesCbc,
+            yh_algorithm::YH_ALGO_AES_KWP => ObjectAlgorithm::AesKwp,
         }
     }
 }
@@ -868,6 +889,13 @@ impl From<ObjectAlgorithm> for yh_algorithm {
             ObjectAlgorithm::Ed25519 => yh_algorithm::YH_ALGO_EC_ED25519,
             ObjectAlgorithm::EcP224 => yh_algorithm::YH_ALGO_EC_P224,
             ObjectAlgorithm::RsaPkcs1Decrypt => yh_algorithm::YH_ALGO_RSA_PKCS1_DECRYPT,
+            ObjectAlgorithm::Ecp256YubicoAuthentication => yh_algorithm::YH_ALGO_EC_P256_YUBICO_AUTHENTICATION,
+            ObjectAlgorithm::Aes128 => yh_algorithm::YH_ALGO_AES128,
+            ObjectAlgorithm::Aes192 => yh_algorithm::YH_ALGO_AES192,
+            ObjectAlgorithm::Aes256 => yh_algorithm::YH_ALGO_AES256,
+            ObjectAlgorithm::AesEcb => yh_algorithm::YH_ALGO_AES_ECB,
+            ObjectAlgorithm::AesCbc => yh_algorithm::YH_ALGO_AES_CBC,
+            ObjectAlgorithm::AesKwp => yh_algorithm::YH_ALGO_AES_KWP,
             ObjectAlgorithm::ANY => yh_algorithm::YH_ALGO_ANY,
         }
     }
@@ -880,20 +908,20 @@ impl<'a> From<&'a ObjectAlgorithm> for yh_algorithm {
 }
 
 impl Display for ObjectAlgorithm {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut ptr: *const std::os::raw::c_char = std::ptr::null();
 
         let a: yh_algorithm = self.into();
 
         unsafe {
             ::error::result_from_libyh(lyh::yh_algo_to_string(a, &mut ptr))
-                .map_err(|_| std::fmt::Error)
+                .map_err(|_| fmt::Error)
         }?;
 
         let cstr = unsafe {
             std::ffi::CStr::from_ptr(ptr)
                 .to_str()
-                .map_err(|_| std::fmt::Error)
+                .map_err(|_| fmt::Error)
         }?;
 
         write!(f, "{}", cstr)
@@ -939,7 +967,7 @@ impl From<yh_object_descriptor> for ObjectDescriptor {
 }
 
 impl Display for ObjectDescriptor {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut desc_str = String::new().to_owned();
         desc_str.push_str(format!("id: 0x{:04x?}\t", self.id).as_str());
         desc_str.push_str(format!("label: {:40}\t", self.label).as_str());
@@ -987,18 +1015,18 @@ impl<'a> From<&'a ObjectType> for yh_object_type {
 }
 
 impl Display for ObjectType {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut ptr: *const std::os::raw::c_char = std::ptr::null();
 
         unsafe {
             ::error::result_from_libyh(lyh::yh_type_to_string(self.into(), &mut ptr))
-                .map_err(|_| std::fmt::Error)
+                .map_err(|_| fmt::Error)
         }?;
 
         let cstr = unsafe {
             std::ffi::CStr::from_ptr(ptr)
                 .to_str()
-                .map_err(|_| std::fmt::Error)
+                .map_err(|_| fmt::Error)
         }?;
 
         write!(f, "{}", cstr)
@@ -1025,7 +1053,7 @@ impl<'a> From<&'a yh_object_descriptor> for ObjectHandle {
 }
 
 impl Display for ObjectHandle {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "0x{:x}   {}", self.object_id, self.object_type)
     }
 }

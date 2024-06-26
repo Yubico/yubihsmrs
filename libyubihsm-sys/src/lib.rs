@@ -74,6 +74,10 @@ pub const YH_MAX_LOG_ENTRIES: c_uint = 64;
 pub const YH_OBJ_LABEL_LEN: usize = 40;
 /// Max number of domains
 pub const YH_MAX_DOMAINS: c_uint = 16;
+/// Lenth of private ECP256 key derived for asymmetric authentication
+pub const YH_EC_P256_PRIVKEY_LEN: usize = 32;
+/// Lenth of public ECP256 key derived for asymmetric authentication
+pub const YH_EC_P256_PUBKEY_LEN: usize = 65;
 
 // Verbosity levels
 /// Verbosity disabled
@@ -501,6 +505,20 @@ pub enum yh_algorithm {
     YH_ALGO_EC_P224 = 47,
     /// RSA PKCS1v1.5 decrypt
     YH_ALGO_RSA_PKCS1_DECRYPT = 48,
+    /// ec-p256-yubico-authentication
+    YH_ALGO_EC_P256_YUBICO_AUTHENTICATION = 49,
+    /// aes128
+    YH_ALGO_AES128 = 50,
+    /// aes192
+    YH_ALGO_AES192 = 51,
+    /// aes256
+    YH_ALGO_AES256 = 52,
+    /// aes-ecb
+    YH_ALGO_AES_ECB = 53,
+    /// aes-cbc
+    YH_ALGO_AES_CBC = 54,
+    /// aes-kwp
+    YH_ALGO_AES_KWP = 55,
 }
 
 impl Default for yh_algorithm {
@@ -1249,6 +1267,31 @@ extern "C" {
         session: *const *mut yh_session,
     ) -> yh_rc;
 }
+extern "C" {
+    /**
+     * Create and authenticate a session using asymmetric authentication key
+     *
+     * @param connector connector to create the session with
+     * @param authkey_id ID of the authentication key
+     * @param privkey client private ECP256 key
+     * @param privkey_len length of client private ECP256 key
+     * @param device_pubkey device public key
+     * @param device_pubkey_len length of device public key
+     * @param session created session
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_create_session_asym(
+        connector: *const yh_connector,
+        authkey_id: u16,
+        privkey: *const u8,
+        privkey_len: usize,
+        device_pubkey: *const u8,
+        device_pubkey_len: usize,
+        session: *const *mut yh_session,
+    ) -> yh_rc;
+}
+
 
 extern "C" {
     /**
@@ -1352,6 +1395,25 @@ extern "C" {
         log_used: *mut u8,
         algorithms: *mut yh_algorithm,
         n_algorithms: *mut usize,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
+     * Get device public key
+     *
+     * @param connector connector to send over
+     * @param pubkey Device public key
+     * @param pubkey_len Device public key length
+     * @param algorithm Algorithm of device public key
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_get_device_pubkey(
+        connector: *const yh_connector,
+        pubkey: *mut u8,
+        pubkey_len: *mut usize,
+        algorithm: *mut yh_algorithm,
     ) -> yh_rc;
 }
 
@@ -2095,6 +2157,30 @@ extern "C" {
         out_len: *mut usize,
     ) -> yh_rc;
 }
+
+extern "C" {
+    /**
+     * Derive ECP256 keypaor from password
+     *
+     * @param password password to derive kaypair from
+     * @param password_len length of password
+     * @param privkey derived private key
+     * @param privkey_len length of derived private key
+     * @param pubkey derived public key
+     * @param pubkey_len length of derived public key
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_derive_ec_p256_key(
+        password: *const u8,
+        password_len: usize,
+        privkey: *const u8,
+        privkey_len: usize,
+        pubkey: *const u8,
+        pubkey_len: usize,
+    ) -> yh_rc;
+}
+
 
 extern "C" {
     /**

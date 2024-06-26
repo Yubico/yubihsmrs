@@ -41,7 +41,7 @@ extern crate rustc_serialize;
 extern crate serde;
 
 use std::fmt::Display;
-use lyh::{yh_algorithm, yh_connector, yh_rc, yh_session};
+use lyh::{yh_algorithm, yh_connector, YH_EC_P256_PRIVKEY_LEN, YH_EC_P256_PUBKEY_LEN, yh_rc, yh_session};
 
 pub mod error;
 use error::Error;
@@ -150,6 +150,33 @@ impl YubiHsm {
         Ok(Session { ptr: session_ptr })
     }
 
+    /// Open a session with the device authenticated with an asymmetrical authkey
+    pub fn establish_session_asym(
+        &self,
+        key_id: u16,
+        privkey: &[u8],
+        device_pubkey: &[u8],
+    ) -> Result<Session, Error> {
+        let session_ptr: *mut yh_session = ::std::ptr::null_mut();
+
+        error::result_from_libyh(unsafe {
+            lyh::yh_create_session_asym(
+                self.connector,
+                key_id,
+                privkey.as_ptr(),
+                privkey.len(),
+                device_pubkey.as_ptr(),
+                device_pubkey.len(),
+                &session_ptr,
+            )
+        })
+            .and(error::result_from_libyh(unsafe {
+                lyh::yh_authenticate_session(session_ptr)
+            }))?;
+
+        Ok(Session { ptr: session_ptr })
+    }
+
     /// Obtain device information
     pub fn get_device_info(&self) -> Result<DeviceInfo, Error> {
         let res;
@@ -160,7 +187,7 @@ impl YubiHsm {
         let mut log_total = 0;
         let mut log_used = 0;
         let mut algorithms =
-            [lyh::yh_algorithm::YH_ALGO_RSA_PKCS1_SHA1; lyh::YH_MAX_ALGORITHM_COUNT];
+            [yh_algorithm::YH_ALGO_RSA_PKCS1_SHA1; lyh::YH_MAX_ALGORITHM_COUNT];
         let mut n_algorithms = lyh::YH_MAX_ALGORITHM_COUNT;
 
         unsafe {
@@ -188,6 +215,28 @@ impl YubiHsm {
             log_used,
             algorithms: algorithms[0..n_algorithms].to_vec(),
         })
+    }
+
+    /// Obtain device public key
+    pub fn get_device_pubkey(&self) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+        let mut key_algorithm = yh_algorithm::YH_ALGO_ANY;
+
+        let res = unsafe {
+            lyh::yh_util_get_device_pubkey (
+                self.connector,
+                out.as_mut_ptr(),
+                &mut out_len,
+                &mut key_algorithm,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
     }
 
     /// Disconnect from the device
@@ -266,7 +315,7 @@ impl Session {
                 lyh::yh_object_type::from(obj_type),
                 0,
                 &ObjectCapability::primitive_from_slice(object_capabilities),
-                lyh::yh_algorithm::from(algorithm),
+                yh_algorithm::from(algorithm),
                 c_str.as_ptr(),
                 objects.as_mut_ptr(),
                 &mut n_objects,
@@ -354,6 +403,59 @@ impl Session {
         error::result_from_libyh(res)?;
 
         Ok(real_id)
+    }
+
+    /// Import an ECP256 public key as authkey
+    pub fn import_authentication_publickey(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        delegated_capabilities: &[ObjectCapability],
+        pubkey: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_authentication_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                &ObjectCapability::primitive_from_slice(delegated_capabilities),
+                pubkey[1..].as_ptr(),
+                pubkey.len() - 1,
+                [].as_ptr(),
+                0
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
+    /// Derive ECP256 key from a password and return the public key portion
+    pub fn derive_ec_p256_key_from_password(&self, password: &[u8]) -> Result<Vec<u8>, Error> {
+
+        let privkey:[u8;YH_EC_P256_PRIVKEY_LEN] = [0;YH_EC_P256_PRIVKEY_LEN];
+        let pubkey:[u8;YH_EC_P256_PUBKEY_LEN] = [0;YH_EC_P256_PUBKEY_LEN];
+
+        let res = unsafe {
+            lyh::yh_util_derive_ec_p256_key(
+                password.as_ptr(),
+                password.len(),
+                privkey.as_ptr(),
+                privkey.len(),
+                pubkey.as_ptr(),
+                pubkey.len(),
+            )
+        };
+        error::result_from_libyh(res)?;
+        Ok(pubkey.to_vec())
     }
 
     /// Generate a wrapkey
