@@ -32,7 +32,7 @@ buildlib = ["libyubihsm-sys/buildlib"]
 lazy_static = "1.4.0"
 log = "0.3.8"
 regex = "0.2.2"
-rustc-serialize = "0.3.24"
+rustc-serialize = "0.3.25"
 
 [dev-dependencies]
 base64 = "0.7.0"
