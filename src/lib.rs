@@ -297,6 +297,10 @@ impl Session {
 
         try!(error::result_from_libyh(res));
 
+        if(returned != count) {
+            return Err(Error::WrongLength(count, returned));
+        }
+
         Ok(bytes.into_vec())
     }
 

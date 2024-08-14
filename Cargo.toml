@@ -30,12 +30,12 @@ buildlib = ["libyubihsm-sys/buildlib"]
 
 [dependencies]
 lazy_static = "1.4.0"
-log = "0.3.8"
-regex = "0.2.2"
+log = "0.4.19"
+regex = "1.8.4"
 rustc-serialize = "0.3.25"
 
 [dev-dependencies]
-base64 = "0.7.0"
+base64 = "0.21.2"
 
 [dependencies.libyubihsm-sys]
 path = "libyubihsm-sys"
