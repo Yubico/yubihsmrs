@@ -142,6 +142,22 @@ pub enum ObjectCapability {
     DeleteTemplate,
     /// Delete OTP AEAD key
     DeleteOtpAeadKey,
+    /// Replace Authentication Key 
+    ChangeAuthenticationKey,
+    /// Import AES key. Available with firmware version 2.3.1 or later
+    PutSymmetricKey,
+    /// Generate AES key. Available with firmware version 2.3.1 or later.
+    GenerateSymmetricKey,
+    /// Delete AES key. Available with firmware version 2.3.1 or later.
+    DeleteSymmetricKey,
+    /// Decrypt data using AES ECB mode. Available with firmware version 2.3.1 or later.
+    DecryptEcb,
+    /// Encrypt data using AES CBC mode. Available with firmware version 2.3.1 or later.
+    EncryptEcb,
+    /// Decrypt data using AES CBC mode. Available with firmware version 2.3.1 or later.
+    DecryptCbc,
+    /// Encrypt data using AES CBC mode. Available with firmware version 2.3.1 or later.
+    EncryptCbc,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -381,7 +397,16 @@ lazy_static! {
          ((5, 0x04), ObjectCapability::DeleteWrapKey),
          ((5, 0x08), ObjectCapability::DeleteHmacKey),
          ((5, 0x10), ObjectCapability::DeleteTemplate),
-         ((5, 0x20), ObjectCapability::DeleteOtpAeadKey)]
+         ((5, 0x20), ObjectCapability::DeleteOtpAeadKey),
+         ((5, 0x40), ObjectCapability::ChangeAuthenticationKey),
+         ((5, 0x80), ObjectCapability::PutSymmetricKey),
+
+         ((6, 0x01), ObjectCapability::GenerateSymmetricKey),
+         ((6, 0x02), ObjectCapability::DeleteSymmetricKey),
+         ((6, 0x04), ObjectCapability::DecryptEcb),
+         ((6, 0x08), ObjectCapability::EncryptEcb),
+         ((6, 0x10), ObjectCapability::DecryptCbc),
+         ((6, 0x20), ObjectCapability::EncryptCbc)]         
          .iter().cloned().collect();
 }
 
@@ -900,6 +925,15 @@ impl<'a> From<&'a ObjectCapability> for (u8, u8) {
             ObjectCapability::DeleteHmacKey => (5, 0x08),
             ObjectCapability::DeleteTemplate => (5, 0x10),
             ObjectCapability::DeleteOtpAeadKey => (5, 0x20),
+            ObjectCapability::ChangeAuthenticationKey => (5, 0x40),
+            ObjectCapability::PutSymmetricKey => (5, 0x80),
+
+            ObjectCapability::GenerateSymmetricKey => (6, 0x01),
+            ObjectCapability::DeleteSymmetricKey => (6, 0x02),
+            ObjectCapability::DecryptEcb => (6, 0x04),
+            ObjectCapability::EncryptEcb => (6, 0x08),
+            ObjectCapability::DecryptCbc => (6, 0x10),
+            ObjectCapability::EncryptCbc => (6, 0x20),            
         }
     }
 }
