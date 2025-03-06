@@ -619,6 +619,37 @@ impl Session {
     }
 
     #[allow(clippy::too_many_arguments)]
+    /// Import an AES key
+    pub fn import_aes_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        algorithm: ObjectAlgorithm,
+        k: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_aes_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                algorithm.into(),
+                k.as_ptr(),
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     /// Import an X509Certificate
     pub fn import_cert(
         &self,
@@ -823,6 +854,35 @@ impl Session {
         ))
     }
 
+    /// Generate a new AES key
+    pub fn generate_aes_key (
+        &self,
+        key_id: u16,
+        label: &str,
+        capabilities: &[ObjectCapability],
+        domains: &[ObjectDomain],
+        key_algorithm: ObjectAlgorithm,
+    ) -> Result<u16, Error> {
+
+
+        let mut real_id = key_id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_generate_aes_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                key_algorithm.into())
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
     /// Get the public key
     pub fn get_pubkey(
         &self,
@@ -949,6 +1009,118 @@ impl Session {
             lyh::yh_util_sign_eddsa(
                 self.ptr,
                 key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Encrypt data using AES ECB
+    pub fn encrypt_aes_ecb(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_encrypt_aes_ecb(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Encrypt data using AES CBC
+    pub fn encrypt_aes_cbc(
+        &self,
+        key_id: u16,
+        iv: &[u8],
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_encrypt_aes_cbc(
+                self.ptr,
+                key_id,
+                iv.as_ptr(),
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Decrypt data using AES ECB
+    pub fn decrypt_aes_ecb(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_decrypt_aes_ecb(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Decrypt data using AES CBC
+    pub fn decrypt_aes_cbc(
+        &self,
+        key_id: u16,
+        iv: &[u8],
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_decrypt_aes_cbc(
+                self.ptr,
+                key_id,
+                iv.as_ptr(),
                 data.as_ptr(),
                 data.len(),
                 out.as_mut_ptr(),

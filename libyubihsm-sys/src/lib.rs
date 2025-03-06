@@ -385,6 +385,8 @@ pub enum yh_object_type {
     YH_AUTHENTICATION_KEY = 0x02,
     /// Asymmetric key
     YH_ASYMMETRIC_KEY = 0x03,
+    /// Symmetric key
+    YH_SYMMETRIC_KEY = 0x08,
     /// Wrap key
     YH_WRAP_KEY = 0x04,
     /// HMAC key
@@ -1745,6 +1747,31 @@ extern "C" {
 
 extern "C" {
     /**
+     * Import AES key
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param label Label
+     * @param domains domains
+     * @param capabilities capabilities
+     * @param algorithm algorithm
+     * @param key key data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_import_aes_key(
+        session: *const yh_session,
+        key_id: *mut u16,
+        label: *const c_char,
+        domains: u16,
+        capabilities: *const yh_capabilities,
+        algorithm: yh_algorithm,
+        key: *const u8,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
      * Generate RSA key
      *
      * @param session session to use
@@ -1814,6 +1841,29 @@ extern "C" {
 
 extern "C" {
     /**
+     * Generate AES key
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param label Label
+     * @param domains domains
+     * @param capabilities capabilities
+     * @param algorithm algorithm
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_generate_aes_key(
+        session: *const yh_session,
+        key_id: *mut u16,
+        label: *const c_char,
+        domains: u16,
+        capabilities: *const yh_capabilities,
+        algorithm: yh_algorithm,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
      * Verify HMAC data
      *
      * @param session session to use
@@ -1857,6 +1907,102 @@ extern "C" {
         domains: u16,
         capabilities: *const yh_capabilities,
         algorithm: yh_algorithm,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
+     * Encrypt data using AES ECB
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param in plain text data in multiple of 16 bytes
+     * @param in_len length of plain text data
+     * @param out Encrypted data
+     * @param out_len length of encrypted data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_encrypt_aes_ecb(
+        session: *const yh_session,
+        key_id: u16,
+        in_: *const u8,
+        in_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
+     * Encrypt data using AES CBC
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param iv 16 bytes IV
+     * @param in plain text data in multiple of 16 bytes
+     * @param in_len length of plain text data
+     * @param out Encrypted data
+     * @param out_len length of encrypted data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_encrypt_aes_cbc(
+        session: *const yh_session,
+        key_id: u16,
+        iv: *const u8,
+        in_: *const u8,
+        in_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
+     * Decrypt data using AES ECB
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param in Encrypted data
+     * @param in_len length of encrypted data
+     * @param out Decrypted data
+     * @param out_len length of decrypted data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_decrypt_aes_ecb(
+        session: *const yh_session,
+        key_id: u16,
+        in_: *const u8,
+        in_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
+     * Decrypt data using AES CBC
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param iv 16 bytes IV
+     * @param in Encrypted data
+     * @param in_len length of encrypted data
+     * @param out Decrypted data
+     * @param out_len length of decrypted data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_decrypt_aes_cbc(
+        session: *const yh_session,
+        key_id: u16,
+        iv: *const u8,
+        in_: *const u8,
+        in_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
     ) -> yh_rc;
 }
 

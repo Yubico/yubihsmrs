@@ -41,6 +41,8 @@ pub enum ObjectType {
     AuthenticationKey,
     /// Asymmetric key
     AsymmetricKey,
+    /// Symmetric key
+    SymmetricKey,
     /// Wrap key
     WrapKey,
     /// Hmac key
@@ -151,6 +153,20 @@ pub enum ObjectCapability {
     DeleteTemplate,
     /// Delete OTP AEAD key
     DeleteOtpAeadKey,
+    /// Generate symmetric Key
+    GenerateSymmetricKey,
+    /// Put symmetric key
+    PutSymmetricKey,
+    /// Delete symmetric key
+    DeleteSymmetricKey,
+    /// Encrypt data using CBC mode
+    EncryptCbc,
+    /// Decrypt data using CBC mode
+    DecryptCbc,
+    /// Encrypt data using ECB mode
+    EncryptEcb,
+    /// Decrypt data using ECB mode
+    DecryptEcb,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -409,7 +425,15 @@ lazy_static! {
          ((5, 0x04), ObjectCapability::DeleteWrapKey),
          ((5, 0x08), ObjectCapability::DeleteHmacKey),
          ((5, 0x10), ObjectCapability::DeleteTemplate),
-         ((5, 0x20), ObjectCapability::DeleteOtpAeadKey)]
+         ((5, 0x20), ObjectCapability::DeleteOtpAeadKey),
+         ((5, 0x80), ObjectCapability::PutSymmetricKey),
+
+         ((6, 0x01), ObjectCapability::GenerateSymmetricKey),
+         ((6, 0x02), ObjectCapability::DeleteSymmetricKey),
+         ((6, 0x04), ObjectCapability::DecryptEcb),
+         ((6, 0x08), ObjectCapability::EncryptEcb),
+         ((6, 0x10), ObjectCapability::DecryptCbc),
+         ((6, 0x20), ObjectCapability::EncryptCbc)]
          .iter().cloned().collect();
 }
 
@@ -467,6 +491,14 @@ impl fmt::Debug for ObjectCapability {
             ObjectCapability::DeleteHmacKey => write!(f, "delete-hmac-key"),
             ObjectCapability::DeleteTemplate => write!(f, "delete-template"),
             ObjectCapability::DeleteOtpAeadKey => write!(f, "delete-otp-aead-key"),
+
+            ObjectCapability::GenerateSymmetricKey => write!(f, "generate-symmetric-key"),
+            ObjectCapability::PutSymmetricKey => write!(f, "put-symmetric-key"),
+            ObjectCapability::DeleteSymmetricKey => write!(f, "delete-symmetric-key"),
+            ObjectCapability::EncryptCbc => write!(f, "encrypt-cbc"),
+            ObjectCapability::DecryptCbc => write!(f, "decrypt-cbc"),
+            ObjectCapability::EncryptEcb => write!(f, "encrypt-ecb"),
+            ObjectCapability::DecryptEcb => write!(f, "decrypt-ecb"),
         }
     }
 }
@@ -525,6 +557,14 @@ impl Display for ObjectCapability {
             ObjectCapability::DeleteHmacKey => write!(f, "Delete HMAC Key Objects"),
             ObjectCapability::DeleteTemplate => write!(f, "Delete Template Objects"),
             ObjectCapability::DeleteOtpAeadKey => write!(f, "Delete OTP AEAD Key Objects"),
+
+            ObjectCapability::GenerateSymmetricKey => write!(f, "Generate AES key. Available with firmware version 2.3.1 or later."),
+            ObjectCapability::PutSymmetricKey => write!(f, "Import AES key. Available with firmware version 2.3.1 or later."),
+            ObjectCapability::DeleteSymmetricKey => write!(f, "Delete AES key. Available with firmware version 2.3.1 or later."),
+            ObjectCapability::EncryptCbc => write!(f, "Encrypt data using AES CBC mode. Available with firmware version 2.3.1 or later."),
+            ObjectCapability::DecryptCbc => write!(f, "Decrypt data using AES CBC mode. Available with firmware version 2.3.1 or later."),
+            ObjectCapability::EncryptEcb => write!(f, "Encrypt data using AES ECB mode. Available with firmware version 2.3.1 or later."),
+            ObjectCapability::DecryptEcb => write!(f, "Decrypt data using AES ECB mode. Available with firmware version 2.3.1 or later."),
         }
     }
 }
@@ -750,6 +790,7 @@ impl From<yh_object_type> for ObjectType {
             yh_object_type::YH_OPAQUE => ObjectType::Opaque,
             yh_object_type::YH_AUTHENTICATION_KEY => ObjectType::AuthenticationKey,
             yh_object_type::YH_ASYMMETRIC_KEY => ObjectType::AsymmetricKey,
+            yh_object_type::YH_SYMMETRIC_KEY => ObjectType::SymmetricKey,
             yh_object_type::YH_WRAP_KEY => ObjectType::WrapKey,
             yh_object_type::YH_HMAC_KEY => ObjectType::HmacKey,
             yh_object_type::YH_TEMPLATE => ObjectType::Template,
@@ -998,6 +1039,7 @@ impl From<ObjectType> for yh_object_type {
             ObjectType::Opaque => yh_object_type::YH_OPAQUE,
             ObjectType::AuthenticationKey => yh_object_type::YH_AUTHENTICATION_KEY,
             ObjectType::AsymmetricKey => yh_object_type::YH_ASYMMETRIC_KEY,
+            ObjectType::SymmetricKey => yh_object_type::YH_SYMMETRIC_KEY,
             ObjectType::WrapKey => yh_object_type::YH_WRAP_KEY,
             ObjectType::HmacKey => yh_object_type::YH_HMAC_KEY,
             ObjectType::Template => yh_object_type::YH_TEMPLATE,
@@ -1041,6 +1083,7 @@ impl<'a> From<&'a yh_object_descriptor> for ObjectHandle {
                 yh_object_type::YH_OPAQUE => ObjectType::Opaque,
                 yh_object_type::YH_AUTHENTICATION_KEY => ObjectType::AuthenticationKey,
                 yh_object_type::YH_ASYMMETRIC_KEY => ObjectType::AsymmetricKey,
+                yh_object_type::YH_SYMMETRIC_KEY => ObjectType::SymmetricKey,
                 yh_object_type::YH_WRAP_KEY => ObjectType::WrapKey,
                 yh_object_type::YH_HMAC_KEY => ObjectType::HmacKey,
                 yh_object_type::YH_TEMPLATE => ObjectType::Template,
@@ -1118,6 +1161,14 @@ impl<'a> From<&'a ObjectCapability> for (u8, u8) {
             ObjectCapability::DeleteHmacKey => (5, 0x08),
             ObjectCapability::DeleteTemplate => (5, 0x10),
             ObjectCapability::DeleteOtpAeadKey => (5, 0x20),
+            ObjectCapability::PutSymmetricKey => (5, 0x80),
+
+            ObjectCapability::GenerateSymmetricKey => (6, 0x01),
+            ObjectCapability::DeleteSymmetricKey => (6, 0x02),
+            ObjectCapability::DecryptEcb => (6, 0x04),
+            ObjectCapability::EncryptEcb => (6, 0x08),
+            ObjectCapability::DecryptCbc => (6, 0x10),
+            ObjectCapability::EncryptCbc => (6, 0x20),
         }
     }
 }
