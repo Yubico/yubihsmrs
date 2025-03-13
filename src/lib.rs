@@ -1023,6 +1023,32 @@ impl Session {
         Ok(out_vec)
     }
 
+    /// Sign attestation certificate
+    pub fn sign_attestation_certificate(
+        &self,
+        keyid_attest: u16,
+        keyid_attesting: u16,
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_sign_attestation_certificate(
+                self.ptr,
+                keyid_attest,
+                keyid_attesting,
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
     /// Encrypt data using AES ECB
     pub fn encrypt_aes_ecb(
         &self,
