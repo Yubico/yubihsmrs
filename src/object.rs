@@ -983,6 +983,25 @@ impl ObjectOrigin {
     }
 }
 
+impl ObjectDescriptor {
+
+    /// Implement an empty ObjectDescriptor
+    pub fn new() -> ObjectDescriptor {
+        ObjectDescriptor {
+            capabilities: Vec::new(),
+            id: 0,
+            len: 0,
+            domains: Vec::new(),
+            object_type: ObjectType::Any,
+            algorithm: ObjectAlgorithm::ANY,
+            sequence: 0,
+            origin: ObjectOrigin::Generated,
+            label: "".to_string(),
+            delegated_capabilities: None,
+        }
+    }
+}
+
 impl From<yh_object_descriptor> for ObjectDescriptor {
     fn from(descriptor: yh_object_descriptor) -> Self {
         let delegated = ObjectCapability::from_primitive(descriptor.delegated_capabilities);
@@ -1010,24 +1029,27 @@ impl From<yh_object_descriptor> for ObjectDescriptor {
 impl Display for ObjectDescriptor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut desc_str = String::new().to_owned();
-        desc_str.push_str(format!("id: 0x{:04x?}\t", self.id).as_str());
-        desc_str.push_str(format!("label: {:40}\t", self.label).as_str());
-        desc_str.push_str(format!("algo: {:24}\t", self.algorithm).as_str());
+        desc_str.push_str(format!("ID: 0x{:04x?}\t", self.id).as_str());
+        desc_str.push_str(format!("Label: {:40}\t", self.label).as_str());
+        desc_str.push_str(format!("Algorithm: {:24}\t", self.algorithm).as_str());
 
-        desc_str.push_str(format!("seq: {:2}\t", self.sequence).as_str());
-        desc_str.push_str(format!("origin: {:17?}\t", self.origin).as_str());
+        desc_str.push_str(format!("Sequence: {:2}\t", self.sequence).as_str());
+        desc_str.push_str(format!("Origin: {:17?}\t", self.origin).as_str());
         let mut dom_str = String::new().to_owned();
         self.domains.iter().for_each(|domain| dom_str.push_str(format!("{},", domain).as_str()));
-        desc_str.push_str(format!("domains: {:40}\t", dom_str).as_str());
+        dom_str.pop();
+        desc_str.push_str(format!("Domains: {:40}\t", dom_str).as_str());
 
         let mut caps_str = String::new().to_owned();
         self.capabilities.iter().for_each(|cap| caps_str.push_str(format!("{:?},", cap).as_str()));
-        desc_str.push_str(format!("capabilities: {}\t", caps_str).as_str());
+        caps_str.pop();
+        desc_str.push_str(format!("Capabilities: {}\t", caps_str).as_str());
 
         if self.object_type==ObjectType::AuthenticationKey || self.object_type==ObjectType::WrapKey {
             caps_str = String::new().to_owned();
             self.delegated_capabilities.iter().for_each(|cap| caps_str.push_str(format!("{:?},", cap).as_str()));
-            desc_str.push_str(format!("delegated capabilities: {}\t", caps_str).as_str());
+            caps_str.pop();
+            desc_str.push_str(format!("Delegated capabilities: {}\t", caps_str).as_str());
         }
         write!(f, "{}", desc_str)
     }
