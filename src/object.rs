@@ -524,7 +524,7 @@ impl Display for ObjectCapability {
             ObjectCapability::PutWrapKey => write!(f, "Import Wrap Key Objects"),
             ObjectCapability::GenerateWrapKey => write!(f, "Generate Wrap Key Objects"),
 
-            ObjectCapability::ExportableUnderWrap => write!(f, "Mark an Object as exportable under wrap"),
+            ObjectCapability::ExportableUnderWrap => write!(f, "Mark Object as exportable under wrap"),
             ObjectCapability::SetOption => write!(f, "Set device-global options"),
             ObjectCapability::GetOption => write!(f, "Read device-global options"),
             ObjectCapability::GetPseudoRandom => write!(f, "Extract random bytes"),

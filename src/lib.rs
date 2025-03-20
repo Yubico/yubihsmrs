@@ -909,6 +909,30 @@ impl Session {
         Ok((out_vec, key_algorithm.into()))
     }
 
+    /// Get the opaque object value
+    pub fn get_opaque(
+        &self,
+        key_id: u16,
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_get_opaque(
+                self.ptr,
+                key_id,
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
     /// Sign data using RSA-PKCS#1v1.5
     pub fn sign_pkcs1v1_5(
         &self,
