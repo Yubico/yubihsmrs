@@ -80,7 +80,7 @@ pub fn is_modhex(otp: &str) -> bool {
 
 impl<'r> Otp<'r> {
     /// Create and OTP from a string of text
-    pub fn new(string: &'r str) -> Option<Otp> {
+    pub fn new(string: &'r str) -> Option<Otp<'r>> {
         if OTP_RE.is_match(string) {
             Some(Otp {
                 public_id: &string[0..12],
