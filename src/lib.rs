@@ -603,7 +603,7 @@ impl Session {
         let c_str = ::std::ffi::CString::new(label).unwrap();
 
         let res = unsafe {
-            lyh::yh_util_import_ec_key(
+            lyh::yh_util_import_ed_key(
                 self.ptr,
                 &mut real_id,
                 c_str.as_ptr(),
