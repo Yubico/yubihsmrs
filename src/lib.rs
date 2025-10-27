@@ -887,14 +887,16 @@ impl Session {
     pub fn get_pubkey(
         &self,
         key_id: u16,
+        key_type: ObjectType,
     ) -> Result<(Vec<u8>, ObjectAlgorithm), Error> {
         let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
         let mut out_len = out.len();
         let mut key_algorithm = yh_algorithm::YH_ALGO_ANY;
 
         let res = unsafe {
-            lyh::yh_util_get_public_key(
+            lyh::yh_util_get_public_key_ex(
                 self.ptr,
+                key_type.into(),
                 key_id,
                 out.as_mut_ptr(),
                 &mut out_len,

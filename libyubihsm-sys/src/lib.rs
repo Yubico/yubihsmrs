@@ -1471,7 +1471,7 @@ extern "C" {
 
 extern "C" {
     /**
-     * Get Public key
+     * Get Public key with the specified ID
      *
      * @param session session to use
      * @param id Object ID
@@ -1483,6 +1483,29 @@ extern "C" {
      **/
     pub fn yh_util_get_public_key(
         session: *const yh_session,
+        id: u16,
+        data: *mut u8,
+        data_len: *mut usize,
+        algorithm: *mut yh_algorithm,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
+     * Get Public key with the specified ID and type
+     *
+     * @param session session to use
+     * @param key_type Object type
+     * @param id Object ID
+     * @param data Data out
+     * @param data_len Data length
+     * @param algorithm Algorithm of object
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_get_public_key_ex(
+        session: *const yh_session,
+        key_type: yh_object_type,
         id: u16,
         data: *mut u8,
         data_len: *mut usize,
@@ -2306,7 +2329,7 @@ extern "C" {
 
 extern "C" {
     /**
-     * Derive ECP256 keypaor from password
+     * Derive ECP256 keypair from password
      *
      * @param password password to derive kaypair from
      * @param password_len length of password
