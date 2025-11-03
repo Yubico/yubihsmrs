@@ -523,6 +523,40 @@ impl Session {
         Ok(real_id)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    /// Import an RSA public key as wrapkey
+    pub fn import_public_wrap_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        algorithm: ObjectAlgorithm,
+        delegated_capabilities: &[ObjectCapability],
+        wrapkey: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_public_wrap_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                algorithm.into(),
+                &ObjectCapability::primitive_from_slice(delegated_capabilities),
+                wrapkey.as_ptr(),
+                wrapkey.len(),
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
 
     #[allow(clippy::too_many_arguments)]
     /// Import a RSA key
@@ -718,6 +752,36 @@ impl Session {
         Ok(out_vec)
     }
 
+    /// Export an object under wrap from the device with the option to include the ED25519 seed
+    pub fn export_wrapped_ex(
+        &self,
+        wrapping_key_id: u16,
+        target_type: ObjectType,
+        target_id: u16,
+        format: u8,
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_export_wrapped_ex(
+                self.ptr,
+                wrapping_key_id,
+                target_type.into(),
+                target_id,
+                if format > 0 { 1 } else { 0 },
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
     /// Import a wrapped object
     pub fn import_wrapped(
         &self,
@@ -731,6 +795,158 @@ impl Session {
             lyh::yh_util_import_wrapped(
                 self.ptr,
                 wrapping_key_id,
+                bytes.as_ptr(),
+                bytes.len(),
+                &mut object_type,
+                &mut id,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(ObjectHandle {
+            object_id: id,
+            object_type: (&object_type).into(),
+        })
+    }
+
+    /// Export a (a)symmetric key material using an RSA wrap key
+    pub fn export_rsa_wrapped_key(
+        &self,
+        wrapping_key_id: u16,
+        target_type: ObjectType,
+        target_id: u16,
+        aes_algorithm: ObjectAlgorithm,
+        oaep_algorithm: ObjectAlgorithm,
+        mfg1_algorithm: ObjectAlgorithm,
+        oaep_label: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_get_rsa_wrapped_key(
+                self.ptr,
+                wrapping_key_id,
+                target_type.into(),
+                target_id,
+                aes_algorithm.into(),
+                oaep_algorithm.into(),
+                mfg1_algorithm.into(),
+                oaep_label.as_ptr(),
+                oaep_label.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Import an (a)symmetric key using an RSA wrap key.
+    pub fn import_rsa_wrapped_key(
+        &self,
+        wrapping_key_id: u16,
+        object_type: ObjectType,
+        object_id: u16,
+        object_algorithm: ObjectAlgorithm,
+        object_label: &str,
+        object_domains: &[ObjectDomain],
+        object_capabilities: &[ObjectCapability],
+        oaep_algorithm: ObjectAlgorithm,
+        mgf1_algorithm: ObjectAlgorithm,
+        oaep_label: &[u8],
+        bytes: &[u8],
+    ) -> Result<ObjectHandle, Error> {
+        let c_str = ::std::ffi::CString::new(object_label).unwrap();
+        let mut id: u16 = object_id;
+
+        let res = unsafe {
+            lyh::yh_util_put_rsa_wrapped_key(
+                self.ptr,
+                wrapping_key_id,
+                object_type.into(),
+                &mut id,
+                object_algorithm.into(),
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(object_domains),
+                &ObjectCapability::primitive_from_slice(object_capabilities),
+                oaep_algorithm.into(),
+                mgf1_algorithm.into(),
+                oaep_label.as_ptr(),
+                oaep_label.len(),
+                bytes.as_ptr(),
+                bytes.len(),
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(ObjectHandle {
+            object_id: id,
+            object_type,
+        })
+    }
+
+    /// Export an object using an RSA wrap key
+    pub fn export_rsa_wrapped_object(
+        &self,
+        wrapping_key_id: u16,
+        target_type: ObjectType,
+        target_id: u16,
+        aes_algorithm: ObjectAlgorithm,
+        oaep_algorithm: ObjectAlgorithm,
+        mfg1_algorithm: ObjectAlgorithm,
+        oaep_label: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_export_rsa_wrapped(
+                self.ptr,
+                wrapping_key_id,
+                target_type.into(),
+                target_id,
+                aes_algorithm.into(),
+                oaep_algorithm.into(),
+                mfg1_algorithm.into(),
+                oaep_label.as_ptr(),
+                oaep_label.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Import an object using an RSA wrap key
+    pub fn import_rsa_wrapped_object(
+        &self,
+        wrapping_key_id: u16,
+        oaep_algorithm: ObjectAlgorithm,
+        mgf1_algorithm: ObjectAlgorithm,
+        oaep_label: &[u8],
+        bytes: &[u8],
+    ) -> Result<ObjectHandle, Error> {
+        let mut object_type: lyh::yh_object_type = lyh::yh_object_type::default();
+        let mut id: u16 = 0;
+
+        let res = unsafe {
+            lyh::yh_util_import_rsa_wrapped(
+                self.ptr,
+                wrapping_key_id,
+                oaep_algorithm.into(),
+                mgf1_algorithm.into(),
+                oaep_label.as_ptr(),
+                oaep_label.len(),
                 bytes.as_ptr(),
                 bytes.len(),
                 &mut object_type,
@@ -1799,6 +2015,7 @@ mod test {
             (ObjectType::OtpAeadKey, "otp-aead-key"),
             (ObjectType::Template, "template"),
             (ObjectType::WrapKey, "wrap-key"),
+            (ObjectType::PublicWrapKey, "public-wrap-key"),
         ];
 
         for t in types {

@@ -45,6 +45,8 @@ pub enum ObjectType {
     SymmetricKey,
     /// Wrap key
     WrapKey,
+    /// Public wrap key
+    PublicWrapKey,
     /// Hmac key
     HmacKey,
     /// Template
@@ -792,6 +794,7 @@ impl From<yh_object_type> for ObjectType {
             yh_object_type::YH_ASYMMETRIC_KEY => ObjectType::AsymmetricKey,
             yh_object_type::YH_SYMMETRIC_KEY => ObjectType::SymmetricKey,
             yh_object_type::YH_WRAP_KEY => ObjectType::WrapKey,
+            yh_object_type::YH_PUBLIC_WRAP_KEY => ObjectType::PublicWrapKey,
             yh_object_type::YH_HMAC_KEY => ObjectType::HmacKey,
             yh_object_type::YH_TEMPLATE => ObjectType::Template,
             yh_object_type::YH_OTP_AEAD_KEY => ObjectType::OtpAeadKey,
@@ -1045,7 +1048,7 @@ impl Display for ObjectDescriptor {
         caps_str.pop();
         desc_str.push_str(format!("Capabilities: {}\t", caps_str).as_str());
 
-        if self.object_type==ObjectType::AuthenticationKey || self.object_type==ObjectType::WrapKey {
+        if [ObjectType::AuthenticationKey, ObjectType::WrapKey, ObjectType::PublicWrapKey].contains(&self.object_type) {
             caps_str = String::new().to_owned();
             self.delegated_capabilities.iter().for_each(|cap| caps_str.push_str(format!("{:?},", cap).as_str()));
             caps_str.pop();
@@ -1063,6 +1066,7 @@ impl From<ObjectType> for yh_object_type {
             ObjectType::AsymmetricKey => yh_object_type::YH_ASYMMETRIC_KEY,
             ObjectType::SymmetricKey => yh_object_type::YH_SYMMETRIC_KEY,
             ObjectType::WrapKey => yh_object_type::YH_WRAP_KEY,
+            ObjectType::PublicWrapKey => yh_object_type::YH_PUBLIC_WRAP_KEY,
             ObjectType::HmacKey => yh_object_type::YH_HMAC_KEY,
             ObjectType::Template => yh_object_type::YH_TEMPLATE,
             ObjectType::OtpAeadKey => yh_object_type::YH_OTP_AEAD_KEY,
@@ -1107,6 +1111,7 @@ impl<'a> From<&'a yh_object_descriptor> for ObjectHandle {
                 yh_object_type::YH_ASYMMETRIC_KEY => ObjectType::AsymmetricKey,
                 yh_object_type::YH_SYMMETRIC_KEY => ObjectType::SymmetricKey,
                 yh_object_type::YH_WRAP_KEY => ObjectType::WrapKey,
+                yh_object_type::YH_PUBLIC_WRAP_KEY => ObjectType::PublicWrapKey,
                 yh_object_type::YH_HMAC_KEY => ObjectType::HmacKey,
                 yh_object_type::YH_TEMPLATE => ObjectType::Template,
                 yh_object_type::YH_OTP_AEAD_KEY => ObjectType::OtpAeadKey,

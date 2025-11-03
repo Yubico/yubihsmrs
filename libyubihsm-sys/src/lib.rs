@@ -395,6 +395,8 @@ pub enum yh_object_type {
     YH_TEMPLATE = 0x06,
     /// OTP AEAD key
     YH_OTP_AEAD_KEY = 0x07,
+    /// Public Wrap Key
+    YH_PUBLIC_WRAP_KEY = 0x09,
     /// Public key (virtual)
     YH_PUBLIC_KEY = 0x83,
 }
@@ -2146,6 +2148,31 @@ extern "C" {
 
 extern "C" {
     /**
+     * Export an object under wrap from the device with the option to include the ED25519 seed
+     *
+     * @param session session to use
+     * @param wrapping_key_id ID of wrapping key
+     * @param target_type Type of object
+     * @param target_id ID of object
+     * @param format format of the wrapped data. Currently supported formats: 0=legacy 1=include ED25519 seed
+     * @param out wrapped data
+     * @param out_len length of wrapped data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_export_wrapped_ex(
+        session: *const yh_session,
+        wrapping_key_id: u16,
+        target_type: yh_object_type,
+        target_id: u16,
+        format: u8,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
      * Import a wrapped object
      *
      * @param session session to use
@@ -2160,6 +2187,156 @@ extern "C" {
     pub fn yh_util_import_wrapped(
         session: *const yh_session,
         wrapping_key_id: u16,
+        in_: *const u8,
+        in_len: usize,
+        target_type: *mut yh_object_type,
+        target_id: *mut u16,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
+     * Export a (a)symmetric key material using an RSA wrap key, meta data or
+     *properties, like domains and capabilities, are not included. Only asymmetric
+     *and symmetric key objects are valid targets.
+     *
+     * @param session Authenticated session to use
+     * @param wrapping_key_id Object ID of the Wrap Key to use to wrap the object
+     * @param target_type Type of the target key object
+     * @param target_id Object ID of the target key object
+     * @param aes_algorithm Algorithm of the ephemeral AES key. Can be #YH_ALGO_AES128,
+     *#YH_ALGO_AES192 or #YH_ALGO_AES256
+     * @param hash_algorithm Hash algorithm. One of #YH_ALGO_RSA_OAEP_SHA1,
+     *#YH_ALGO_RSA_OAEP_SHA256, #YH_ALGO_RSA_OAEP_SHA384 or #YH_ALGO_RSA_OAEP_SHA512
+     * @param mgf1 MGF1_algorithm algorithm. One of #YH_ALGO_MGF1_SHA1, #YH_ALGO_MGF1_SHA256,
+     *#YH_ALGO_MGF1_SHA384 or #YH_ALGO_MGF1_SHA512
+     * @param oaep_label Label for the MGF1 algorithm
+     * @param oaep_label_len Label length for the MGF1 algorithm
+     * @param out Wrapped key object bytes
+     * @param out_len Length of the wrapped key
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_get_rsa_wrapped_key(
+        session: *const yh_session,
+        wrapping_key_id: u16,
+        target_type: yh_object_type,
+        target_id: u16,
+        aes_algorithm: yh_algorithm,
+        oaep_algorithm: yh_algorithm,
+        mgf1_algorithm: yh_algorithm,
+        oaep_label: *const u8,
+        oaep_label_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
+     * Import an (a)symmetric key using an RSA wrap key.
+     *
+     * @param session Authenticated session to use
+     * @param wrapping_key_id Object ID of the Wrap Key to use to unwrap the object
+     * @param object_type Type of object to import. One of #YH_SYMMETRIC_KEY or
+     *#YH_ASYMMETRIC_KEY
+     * @param object__id Object ID of object to import
+     * @param object_algorithm Key algorithm of object to import
+     * @param object_label Label of object to import
+     * @param object_domains Domains of object to import
+     * @param object_capabilities of object to import
+     * @param aes_hash Hash algorithm. One of #YH_ALGO_RSA_OAEP_SHA1,
+     *#YH_ALGO_RSA_OAEP_SHA256, #YH_ALGO_RSA_OAEP_SHA384 or #YH_ALGO_RSA_OAEP_SHA512
+     * @param aes_mgf1 MGF1 algorithm. One of #YH_ALGO_MGF1_SHA1, #YH_ALGO_MGF1_SHA256,
+     *#YH_ALGO_MGF1_SHA384 or #YH_ALGO_MGF1_SHA512
+     * @param oaep_label Label for the MGF1 algorithm
+     * @param oaep_label_len Label length for the MGF1 algorithm
+     * @param in Wrapped object bytes
+     * @param in_len Length of the wrapped object
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_put_rsa_wrapped_key(
+        session: *const yh_session,
+        wrapping_key_id: u16,
+        object_type: yh_object_type,
+        object_id:  *mut u16,
+        object_algorithm: yh_algorithm,
+        object_label: *const c_char,
+        object_domains: u16,
+        object_capabilities: *const yh_capabilities,
+        oaep_algorithm: yh_algorithm,
+        mgf1_algorithm: yh_algorithm,
+        oaep_label: *const u8,
+        oaep_label_len: usize,
+        in_: *const u8,
+        in_len: usize,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
+     * Export an object using an RSA wrap key. The wrapped object contain all meta
+     *data and properties, like domains and capabilities
+     *
+     * @param session Authenticated session to use
+     * @param wrapping_key_id Object ID of the Wrap Key to use to wrap the object
+     * @param target_type Type of the target object
+     * @param target_id Object ID of the target object
+     * @param aes_algorithm Algorithm of the ephemeral AES key. Can be #YH_ALGO_AES128,
+     *#YH_ALGO_AES192 or #YH_ALGO_AES256
+     * @param hash_algorithm Hash algorithm. One of #YH_ALGO_RSA_OAEP_SHA1,
+     *#YH_ALGO_RSA_OAEP_SHA256, #YH_ALGO_RSA_OAEP_SHA384 or #YH_ALGO_RSA_OAEP_SHA512
+     * @param mgf1_algorithm MGF1 algorithm. One of #YH_ALGO_MGF1_SHA1, #YH_ALGO_MGF1_SHA256,
+     *#YH_ALGO_MGF1_SHA384 or #YH_ALGO_MGF1_SHA512
+     * @param oaep_label Label for the MGF1 algorithm
+     * @param oaep_label_len Label length for the MGF1 algorithm
+     * @param out Wrapped object bytes
+     * @param out_len Length of the wrapped object
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_export_rsa_wrapped(
+        session: *const yh_session,
+        wrapping_key_id: u16,
+        target_type: yh_object_type,
+        target_id: u16,
+        aes_algorithm: yh_algorithm,
+        oaep_algorithm: yh_algorithm,
+        mgf1_algorithm: yh_algorithm,
+        oaep_label: *const u8,
+        oaep_label_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
+     * Import an object using an RSA wrap key
+     *
+     * @param session Authenticated session to use
+     * @param wrapping_key_id Object ID of the Wrap Key to use to unwrap the object
+     * @param hash_algorithm Hash algorithm. One of #YH_ALGO_RSA_OAEP_SHA1,
+     *#YH_ALGO_RSA_OAEP_SHA256, #YH_ALGO_RSA_OAEP_SHA384 or #YH_ALGO_RSA_OAEP_SHA512
+     * @param mgf1 MGF1 algorithm. One of #YH_ALGO_MGF1_SHA1, #YH_ALGO_MGF1_SHA256,
+     *#YH_ALGO_MGF1_SHA384 or #YH_ALGO_MGF1_SHA512
+     * @param label Label for the MGF1 algorithm
+     * @param oaep_label_len Label length for the MGF1 algorithm
+     * @param in Wrapped object bytes
+     * @param in_len Length of the wrapped object
+     * @param target_type Type of the target object
+     * @param target_id Object ID of the target object
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_import_rsa_wrapped(
+        session: *const yh_session,
+        wrapping_key_id: u16,
+        oaep_algorithm: yh_algorithm,
+        mgf1_algorithm: yh_algorithm,
+        oaep_label: *const u8,
+        oaep_label_len: usize,
         in_: *const u8,
         in_len: usize,
         target_type: *mut yh_object_type,
@@ -2184,6 +2361,35 @@ extern "C" {
      * @return yh_rc error code
      **/
     pub fn yh_util_import_wrap_key(
+        session: *const yh_session,
+        key_id: *mut u16,
+        label: *const c_char,
+        domains: u16,
+        capabilities: *const yh_capabilities,
+        algorithm: yh_algorithm,
+        delegated_capabilities: *const yh_capabilities,
+        in_: *const u8,
+        in_len: usize,
+    ) -> yh_rc;
+}
+
+extern "C" {
+    /**
+     * Import a public RSA key as wrap key
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param label label
+     * @param domains domains
+     * @param capabilities capabilities
+     * @param algorithm algorithm
+     * @param delegated_capabilities delegated capabilities
+     * @param in key
+     * @param in_len key length
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_import_public_wrap_key(
         session: *const yh_session,
         key_id: *mut u16,
         label: *const c_char,
