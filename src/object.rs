@@ -513,11 +513,11 @@ impl Display for ObjectCapability {
             ObjectCapability::PutAuthenticationKey => write!(f, "Import Authentication Key Objects"),
             ObjectCapability::PutAsymmetricKey => write!(f, "Import Asymmetric Key Objects"),
             ObjectCapability::GenerateAsymmetricKey => write!(f, "Generate Asymmetric Key Objects"),
-            ObjectCapability::SignPkcs => write!(f, "Compute signatures using RSA-PKCS1v1.5"),
-            ObjectCapability::SignPss => write!(f, "Compute digital signatures using using RSA-PSS"),
-            ObjectCapability::SignEcdsa => write!(f, "Compute digital signatures using ECDSA"),
+            ObjectCapability::SignPkcs => write!(f, "Sign data using RSA-PKCS1v1.5"),
+            ObjectCapability::SignPss => write!(f, "Sign data using using RSA-PSS"),
+            ObjectCapability::SignEcdsa => write!(f, "Sign data using ECDSA"),
 
-            ObjectCapability::SignEddsa => write!(f, "Compute digital signatures using EDDSA"),
+            ObjectCapability::SignEddsa => write!(f, "Sign data using EDDSA"),
             ObjectCapability::DecryptPkcs => write!(f, "Decrypt data using RSA-PKCS1v1.5"),
             ObjectCapability::DecryptOaep => write!(f, "Decrypt data using RSA-OAEP"),
             ObjectCapability::DeriveEcdh => write!(f, "Derive ECDH"),
@@ -526,7 +526,7 @@ impl Display for ObjectCapability {
             ObjectCapability::PutWrapKey => write!(f, "Import Wrap Key Objects"),
             ObjectCapability::GenerateWrapKey => write!(f, "Generate Wrap Key Objects"),
 
-            ObjectCapability::ExportableUnderWrap => write!(f, "Mark Object as exportable under wrap"),
+            ObjectCapability::ExportableUnderWrap => write!(f, "Exportable under wrap"),
             ObjectCapability::SetOption => write!(f, "Set device-global options"),
             ObjectCapability::GetOption => write!(f, "Read device-global options"),
             ObjectCapability::GetPseudoRandom => write!(f, "Extract random bytes"),
@@ -546,7 +546,7 @@ impl Display for ObjectCapability {
 
             ObjectCapability::RewrapFromOtpAeadKey => write!(f, "Rewrap AEADs from one OTP AEAD Key Object to another"),
             ObjectCapability::RewrapToOtpAeadKey => write!(f, "Rewrap AEADs to one OTP AEAD Key Object from another"),
-            ObjectCapability::SignAttestationCertificate => write!(f, "Attest properties of Asymmetric Key Objects"),
+            ObjectCapability::SignAttestationCertificate => write!(f, "Sign attestation certificates for Asymmetric Key Objects"),
             ObjectCapability::PutOtpAeadKey => write!(f, "Import OTP AEAD Key Objects"),
             ObjectCapability::GenerateOtpAeadKey => write!(f, "Generate OTP AEAD Key Objects"),
             ObjectCapability::WrapData => write!(f, "Wrap user-provided data"),
