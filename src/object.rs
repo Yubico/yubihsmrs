@@ -171,7 +171,7 @@ pub enum ObjectCapability {
     DecryptEcb,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 /// Object domains
 pub enum ObjectDomain {
     /// Domain one
