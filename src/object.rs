@@ -327,7 +327,7 @@ pub enum ObjectAlgorithm {
     ANY,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 /// Object origin
 pub enum ObjectOrigin {
     /// Generate object
