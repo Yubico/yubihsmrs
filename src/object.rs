@@ -341,10 +341,10 @@ pub enum ObjectOrigin {
     WrappedImported,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
 /// Object descriptor
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ObjectDescriptor {
-    /// Ccapabilities
+    /// Capabilities
     pub capabilities: Vec<ObjectCapability>,
     /// Id
     pub id: u16,
