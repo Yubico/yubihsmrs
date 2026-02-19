@@ -366,7 +366,7 @@ pub struct ObjectDescriptor {
     pub delegated_capabilities: Option<Vec<ObjectCapability>>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 /// Object Handle
 pub struct ObjectHandle {
     /// Type
