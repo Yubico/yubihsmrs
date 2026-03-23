@@ -92,6 +92,8 @@ pub enum ObjectCapability {
     ImportWrapped,
     /// Put a wrap key
     PutWrapKey,
+    /// Put a public wrap key
+    PutPublicWrapKey,
     /// Generate a wrap key
     GenerateWrapKey,
     /// Object is exportable under wrap
@@ -149,6 +151,8 @@ pub enum ObjectCapability {
     DeleteAsymmetricKey,
     /// Delete wrap key
     DeleteWrapKey,
+    /// Delete public wrap key
+    DeletePublicWrapKey,
     /// Delete HMAC key
     DeleteHmacKey,
     /// Delete template
@@ -435,7 +439,9 @@ lazy_static! {
          ((6, 0x04), ObjectCapability::DecryptEcb),
          ((6, 0x08), ObjectCapability::EncryptEcb),
          ((6, 0x10), ObjectCapability::DecryptCbc),
-         ((6, 0x20), ObjectCapability::EncryptCbc)]
+         ((6, 0x20), ObjectCapability::EncryptCbc),
+         ((6, 0x40), ObjectCapability::PutPublicWrapKey),
+         ((6, 0x80), ObjectCapability::DeletePublicWrapKey)]
          .iter().cloned().collect();
 }
 
@@ -501,6 +507,8 @@ impl fmt::Debug for ObjectCapability {
             ObjectCapability::DecryptCbc => write!(f, "decrypt-cbc"),
             ObjectCapability::EncryptEcb => write!(f, "encrypt-ecb"),
             ObjectCapability::DecryptEcb => write!(f, "decrypt-ecb"),
+            ObjectCapability::PutPublicWrapKey => write!(f, "put-public-wrap-key"),
+            ObjectCapability::DeletePublicWrapKey => write!(f, "delete-public-wrap-key"),
         }
     }
 }
@@ -560,13 +568,15 @@ impl Display for ObjectCapability {
             ObjectCapability::DeleteTemplate => write!(f, "Delete Template Objects"),
             ObjectCapability::DeleteOtpAeadKey => write!(f, "Delete OTP AEAD Key Objects"),
 
-            ObjectCapability::GenerateSymmetricKey => write!(f, "Generate AES key. Available with firmware version 2.3.1 or later."),
-            ObjectCapability::PutSymmetricKey => write!(f, "Import AES key. Available with firmware version 2.3.1 or later."),
-            ObjectCapability::DeleteSymmetricKey => write!(f, "Delete AES key. Available with firmware version 2.3.1 or later."),
-            ObjectCapability::EncryptCbc => write!(f, "Encrypt data using AES CBC mode. Available with firmware version 2.3.1 or later."),
-            ObjectCapability::DecryptCbc => write!(f, "Decrypt data using AES CBC mode. Available with firmware version 2.3.1 or later."),
-            ObjectCapability::EncryptEcb => write!(f, "Encrypt data using AES ECB mode. Available with firmware version 2.3.1 or later."),
-            ObjectCapability::DecryptEcb => write!(f, "Decrypt data using AES ECB mode. Available with firmware version 2.3.1 or later."),
+            ObjectCapability::GenerateSymmetricKey => write!(f, "Generate AES key. Available with firmware version 2.3.1 or higher."),
+            ObjectCapability::PutSymmetricKey => write!(f, "Import AES key. Available with firmware version 2.3.1 or higher."),
+            ObjectCapability::DeleteSymmetricKey => write!(f, "Delete AES key. Available with firmware version 2.3.1 or higher."),
+            ObjectCapability::EncryptCbc => write!(f, "Encrypt data using AES CBC mode. Available with firmware version 2.3.1 or higher."),
+            ObjectCapability::DecryptCbc => write!(f, "Decrypt data using AES CBC mode. Available with firmware version 2.3.1 or higher."),
+            ObjectCapability::EncryptEcb => write!(f, "Encrypt data using AES ECB mode. Available with firmware version 2.3.1 or higher."),
+            ObjectCapability::DecryptEcb => write!(f, "Decrypt data using AES ECB mode. Available with firmware version 2.3.1 or higher."),
+            ObjectCapability::PutPublicWrapKey => write!(f, "Import Public Wrap Key object. Available with firmware version 2.4 or higher."),
+            ObjectCapability::DeletePublicWrapKey => write!(f, "Delete Public Wrap Key object. Available with firmware version 2.4 or higher."),
         }
     }
 }
@@ -1196,6 +1206,8 @@ impl<'a> From<&'a ObjectCapability> for (u8, u8) {
             ObjectCapability::EncryptEcb => (6, 0x08),
             ObjectCapability::DecryptCbc => (6, 0x10),
             ObjectCapability::EncryptCbc => (6, 0x20),
+            ObjectCapability::PutPublicWrapKey => (6, 0x40),
+            ObjectCapability::DeletePublicWrapKey => (6, 0x80),
         }
     }
 }
