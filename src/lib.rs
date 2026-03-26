@@ -97,6 +97,21 @@ impl Display for DeviceInfo {
     }
 }
 
+impl DeviceInfo {
+    /// Firmware major version
+    pub fn major(&self) -> u8 {
+        self.major
+    }
+    /// Firmware minor version
+    pub fn minor(&self) -> u8 {
+        self.minor
+    }
+    /// Firmware patch version
+    pub fn patch(&self) -> u8 {
+        self.patch
+    }
+}
+
 /// Initialize libyubihsm
 pub fn init() -> Result<(), Error> {
     // TODO(adma): possibly hide this behind fnOnce
