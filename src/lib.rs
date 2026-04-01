@@ -1047,7 +1047,7 @@ impl Session {
                     key_algorithm.into(),
                 )
             };
-            ::error::result_from_libyh(res)?;
+            error::result_from_libyh(res)?;
         } else if unsafe { lyh::yh_is_ec(key_algorithm.into()) } {
             let res = unsafe {
                 lyh::yh_util_generate_ec_key(
@@ -1059,7 +1059,7 @@ impl Session {
                     key_algorithm.into(),
                 )
             };
-            ::error::result_from_libyh(res)?;
+            error::result_from_libyh(res)?;
         } else if unsafe { lyh::yh_is_ed(key_algorithm.into()) } {
             let res = unsafe {
                 lyh::yh_util_generate_ed_key(
@@ -1638,10 +1638,10 @@ mod test {
         res = session.get_object_info(99, ObjectType::Template);
 
         match res {
-            Err(super::Error::LibYubiHsm(super::lyh::Error::DeviceObjectNotFound)) => (),
+            Err(super::Error::LibYubiHsm(lyh::Error::DeviceObjectNotFound)) => (),
             Err(e) => panic!(
                 "Wrong error. Expected {}, found {}",
-                super::Error::LibYubiHsm(super::lyh::Error::DeviceObjectNotFound),
+                super::Error::LibYubiHsm(lyh::Error::DeviceObjectNotFound),
                 e
             ),
             _ => unreachable!(),

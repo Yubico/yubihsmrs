@@ -24,6 +24,7 @@ links = "libyubihsm"
 build = "build.rs"
 keywords = ["yubico", "hsm", "ffi"]
 categories = ["external-ffi-bindings"]
+edition = "2024"
 
 [features]
 default = ["pkg-config"]

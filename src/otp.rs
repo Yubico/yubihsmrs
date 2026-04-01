@@ -21,8 +21,8 @@ use std::os::raw::{c_uchar, c_ushort};
 
 use std::collections::HashMap;
 
-use error;
-use error::Error;
+use crate::error;
+use crate::error::Error;
 
 use rustc_serialize::hex::FromHex; // TODO(adma): use SERDE instead
 

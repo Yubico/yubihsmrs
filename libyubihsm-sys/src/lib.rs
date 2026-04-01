@@ -925,7 +925,7 @@ fn bindgen_test_layout_yh_cap() {
     );
 }
 
-extern "C" {
+unsafe extern "C" {
     #[link_name = "yh_capability"]
     /// Object capabilities
     pub static mut yh_capability: [yh_cap; 47usize];
@@ -977,7 +977,7 @@ fn bindgen_test_layout_yh_algo() {
     );
 }
 
-extern "C" {
+unsafe extern "C" {
     #[link_name = "yh_algorithms"]
     /// Object and function algorithm
     pub static mut yh_algorithms: [yh_algo; 46usize];
@@ -1029,7 +1029,7 @@ fn bindgen_test_layout_yh_ot() {
     );
 }
 
-extern "C" {
+unsafe extern "C" {
     #[link_name = "yh_types"]
     /// Object type
     pub static mut yh_types: [yh_ot; 7usize];
@@ -1081,13 +1081,13 @@ fn bindgen_test_layout_yh_opt() {
     );
 }
 
-extern "C" {
+unsafe extern "C" {
     #[link_name = "yh_options"]
     /// Device global setting
     pub static mut yh_options: [yh_opt; 2usize];
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Return a string describing an error condition
      *
@@ -1098,7 +1098,7 @@ extern "C" {
     pub fn yh_strerror(err: yh_rc) -> *const c_char;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Set verbosity
      * This function may be called prior to global library initialization.
@@ -1110,7 +1110,7 @@ extern "C" {
     pub fn yh_set_verbosity(connector: *const yh_connector, verbosity: u8) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get verbosity
      *
@@ -1121,7 +1121,7 @@ extern "C" {
     pub fn yh_get_verbosity(verbosity: *mut u8) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Global library initialization
      *
@@ -1130,7 +1130,7 @@ extern "C" {
     pub fn yh_init() -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Global library cleanup
      *
@@ -1139,7 +1139,7 @@ extern "C" {
     pub fn yh_exit() -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Instantiate a new connector
      *
@@ -1151,7 +1151,7 @@ extern "C" {
 
 // TODO(adma): FIXME set_connector_options
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Connect to connector
      *
@@ -1162,7 +1162,7 @@ extern "C" {
     pub fn yh_connect(connectors: *const yh_connector) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Disconnect from connector
      *
@@ -1173,7 +1173,7 @@ extern "C" {
     pub fn yh_disconnect(connector: *const yh_connector) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Send a plain message to a connector
      *
@@ -1198,7 +1198,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Send an encrypted message over a session
      *
@@ -1222,7 +1222,7 @@ extern "C" {
         response_len: *mut usize,
     ) -> yh_rc;
 }
-extern "C" {
+unsafe extern "C" {
     /**
      * Create a session with keys derived frm password
      *
@@ -1245,7 +1245,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Create a session
      *
@@ -1271,7 +1271,7 @@ extern "C" {
         session: *const *mut yh_session,
     ) -> yh_rc;
 }
-extern "C" {
+unsafe extern "C" {
     /**
      * Create and authenticate a session using asymmetric authentication key
      *
@@ -1297,7 +1297,7 @@ extern "C" {
 }
 
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Begin create extenal session
      *
@@ -1320,7 +1320,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Finish creating external session
      *
@@ -1351,7 +1351,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Free data associated with session
      *
@@ -1362,7 +1362,7 @@ extern "C" {
     pub fn yh_destroy_session(session: *const *mut yh_session) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Authenticate session
      *
@@ -1373,7 +1373,7 @@ extern "C" {
     pub fn yh_authenticate_session(session: *const yh_session) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get device info
      *
@@ -1402,7 +1402,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get device public key
      *
@@ -1421,7 +1421,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * List objects
      *
@@ -1452,7 +1452,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get object info
      *
@@ -1471,7 +1471,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get Public key with the specified ID
      *
@@ -1492,7 +1492,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get Public key with the specified ID and type
      *
@@ -1515,7 +1515,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Close session
      *
@@ -1526,7 +1526,7 @@ extern "C" {
     pub fn yh_util_close_session(session: *mut yh_session) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign data using PKCS1 v1.5
      *
@@ -1551,7 +1551,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign data using RSS
      *
@@ -1578,7 +1578,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign data using ECDSA
      *
@@ -1601,7 +1601,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign data using EDDSA
      *
@@ -1624,7 +1624,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign data using HMAC
      *
@@ -1647,7 +1647,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get pseudo random data
      *
@@ -1666,7 +1666,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import RSA key
      *
@@ -1693,7 +1693,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import EC key
      *
@@ -1718,7 +1718,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import ED key
      *
@@ -1743,7 +1743,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import HMAC key
      *
@@ -1770,7 +1770,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import AES key
      *
@@ -1795,7 +1795,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Generate RSA key
      *
@@ -1818,7 +1818,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Generate EC key
      *
@@ -1841,7 +1841,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Generate ED key
      *
@@ -1864,7 +1864,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Generate AES key
      *
@@ -1887,7 +1887,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Verify HMAC data
      *
@@ -1912,7 +1912,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Generate HMAC key
      *
@@ -1935,7 +1935,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Encrypt data using AES ECB
      *
@@ -1958,7 +1958,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Encrypt data using AES CBC
      *
@@ -1983,7 +1983,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Decrypt data using AES ECB
      *
@@ -2006,7 +2006,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Decrypt data using AES CBC
      *
@@ -2031,7 +2031,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Decrypt PKCS1 v1.5 data
      *
@@ -2054,7 +2054,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Decrypt OAEP data
      *
@@ -2083,7 +2083,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Perform ECDH key exchange
      *
@@ -2106,7 +2106,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Delete an object
      *
@@ -2123,7 +2123,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Export an object under wrap
      *
@@ -2146,7 +2146,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Export an object under wrap from the device with the option to include the ED25519 seed
      *
@@ -2171,7 +2171,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import a wrapped object
      *
@@ -2194,7 +2194,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Export a (a)symmetric key material using an RSA wrap key, meta data or
      *properties, like domains and capabilities, are not included. Only asymmetric
@@ -2232,7 +2232,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import an (a)symmetric key using an RSA wrap key.
      *
@@ -2274,7 +2274,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Export an object using an RSA wrap key. The wrapped object contain all meta
      *data and properties, like domains and capabilities
@@ -2311,7 +2311,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import an object using an RSA wrap key
      *
@@ -2344,7 +2344,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import a wrap key
      *
@@ -2373,7 +2373,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import a public RSA key as wrap key
      *
@@ -2402,7 +2402,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Generate a wrap key
      *
@@ -2427,7 +2427,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get logs
      *
@@ -2448,7 +2448,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Set the log index
      *
@@ -2460,7 +2460,7 @@ extern "C" {
     pub fn yh_util_set_log_index(session: *const yh_session, index: u16) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get opaque object
      *
@@ -2479,7 +2479,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import opaque object
      *
@@ -2506,7 +2506,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign SSH certificate
      *
@@ -2533,7 +2533,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Derive ECP256 keypair from password
      *
@@ -2557,7 +2557,7 @@ extern "C" {
 }
 
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import authentication key
      *
@@ -2587,7 +2587,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import authentication key with keys derived from password
      *
@@ -2616,7 +2616,7 @@ extern "C" {
 
 // TODO(adma): change_authentication_key{_derived)
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get template
      *
@@ -2635,7 +2635,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import template
      *
@@ -2662,7 +2662,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Create OTP AEAD
      *
@@ -2685,7 +2685,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Create OTP AEAD from random
      *
@@ -2704,7 +2704,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Decrypt OTP
      *
@@ -2733,7 +2733,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import OTP AEAD Key
      *
@@ -2760,7 +2760,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Generate OTP AEAD Key
      *
@@ -2785,7 +2785,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign attestation certificate
      *
@@ -2806,7 +2806,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Set global option
      *
@@ -2825,7 +2825,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get global option
      *
@@ -2844,7 +2844,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get storage information
      *
@@ -2867,7 +2867,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Wrap data
      *
@@ -2890,7 +2890,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Unwrap data
      *
@@ -2913,7 +2913,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Blink the device
      *
@@ -2925,7 +2925,7 @@ extern "C" {
     pub fn yh_util_blink_device(session: *const yh_session, seconds: u8) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Reset the device
      *
@@ -2936,7 +2936,7 @@ extern "C" {
     pub fn yh_util_reset_device(session: *const yh_session) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get session ID
      *
@@ -2948,7 +2948,7 @@ extern "C" {
     pub fn yh_get_session_id(session: *const yh_session, sid: *mut u8) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if the connector has a device connected
      *
@@ -2959,7 +2959,7 @@ extern "C" {
     pub fn yh_connector_has_device(connector: *mut yh_connector) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get the connector version
      *
@@ -2978,7 +2978,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get connector address
      *
@@ -2993,7 +2993,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert capability string to byte array
      *
@@ -3008,7 +3008,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert capability byte array to strings
      *
@@ -3025,7 +3025,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if capability is set
      *
@@ -3043,7 +3043,7 @@ extern "C" {
 // TODO(adma): merge_capabilities
 // TODO(adma): filter_capabilities
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if algorithm is an RSA algorithm
      *
@@ -3054,7 +3054,7 @@ extern "C" {
     pub fn yh_is_rsa(algorithm: yh_algorithm) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if algorithm is an EC algorithm
      *
@@ -3065,7 +3065,7 @@ extern "C" {
     pub fn yh_is_ec(algorithm: yh_algorithm) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if algorithm is an ED algorithm
      *
@@ -3076,7 +3076,7 @@ extern "C" {
     pub fn yh_is_ed(algorithm: yh_algorithm) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if algorithm is a HMAC algorithm
      *
@@ -3087,7 +3087,7 @@ extern "C" {
     pub fn yh_is_hmac(algorithm: yh_algorithm) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get algorithm bitlength
      *
@@ -3099,7 +3099,7 @@ extern "C" {
     pub fn yh_get_key_bitlength(algorithm: yh_algorithm, result: *mut usize) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert algorithm to string
      *
@@ -3111,7 +3111,7 @@ extern "C" {
     pub fn yh_algo_to_string(algo: yh_algorithm, result: *mut *const c_char) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert string to algorithm
      *
@@ -3123,7 +3123,7 @@ extern "C" {
     pub fn yh_string_to_algo(string: *const c_char, algo: *mut yh_algorithm) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert type to string
      *
@@ -3135,7 +3135,7 @@ extern "C" {
     pub fn yh_type_to_string(type_: yh_object_type, result: *mut *const c_char) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert string to type
      *
@@ -3147,7 +3147,7 @@ extern "C" {
     pub fn yh_string_to_type(string: *const c_char, type_: *mut yh_object_type) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert string to option
      *
@@ -3159,7 +3159,7 @@ extern "C" {
     pub fn yh_string_to_option(string: *const c_char, option: *mut yh_option) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Verify an array of log entries
      *
@@ -3176,7 +3176,7 @@ extern "C" {
     ) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Parse a string to a domains parameter
      *
@@ -3188,7 +3188,7 @@ extern "C" {
     pub fn yh_string_to_domains(domains: *const c_char, result: *mut u16) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Write out domains to a string.
      *

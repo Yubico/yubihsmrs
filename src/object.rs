@@ -19,7 +19,8 @@
 use lyh;
 use lyh::{yh_algorithm, yh_capabilities, yh_object_descriptor, yh_object_type};
 
-use error::Error;
+use crate::error;
+use crate::error::Error;
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -27,7 +28,7 @@ use std::str::FromStr;
 use std::fmt;
 use std::fmt::Display;
 
-use Session;
+use crate::Session;
 
 use serde::{Deserialize, Serialize};
 
@@ -713,7 +714,7 @@ impl ObjectDomain {
 
         let c_str = ::std::ffi::CString::new(domains).unwrap();
 
-        ::error::result_from_libyh(unsafe {
+        error::result_from_libyh(unsafe {
             lyh::yh_string_to_domains(c_str.as_ptr(), &mut primitive)
         })?;
 
@@ -968,7 +969,7 @@ impl Display for ObjectAlgorithm {
         let a: yh_algorithm = self.into();
 
         unsafe {
-            ::error::result_from_libyh(lyh::yh_algo_to_string(a, &mut ptr))
+            error::result_from_libyh(lyh::yh_algo_to_string(a, &mut ptr))
                 .map_err(|_| fmt::Error)
         }?;
 
@@ -1097,7 +1098,7 @@ impl Display for ObjectType {
         let mut ptr: *const std::os::raw::c_char = std::ptr::null();
 
         unsafe {
-            ::error::result_from_libyh(lyh::yh_type_to_string(self.into(), &mut ptr))
+            error::result_from_libyh(lyh::yh_type_to_string(self.into(), &mut ptr))
                 .map_err(|_| fmt::Error)
         }?;
 
@@ -1240,7 +1241,7 @@ impl FromStr for ObjectAlgorithm {
     fn from_str(algorithm: &str) -> Result<Self, Self::Err> {
         let mut algo = yh_algorithm::YH_ALGO_ANY;
         let c_str = ::std::ffi::CString::new(algorithm).unwrap();
-        ::error::result_from_libyh(unsafe {
+        error::result_from_libyh(unsafe {
             lyh::yh_string_to_algo(c_str.as_ptr(), &mut algo)
         })?;
         Ok(ObjectAlgorithm::from(&algo))
@@ -1322,7 +1323,7 @@ impl AsymmetricKey {
                 &mut out_len,
             )
         };
-        ::error::result_from_libyh(res)?;
+        error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);

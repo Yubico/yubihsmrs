@@ -21,6 +21,7 @@ authors = ["Alessio Di Mauro <alessio@yubico.com>"]
 description = "Rust wrapper library for libyubihsm"
 keywords = ["yubico", "hsm", "ffi"]
 license = "Apache-2.0"
+edition = "2024"
 
 [lib]
 name = "yubihsmrs"
