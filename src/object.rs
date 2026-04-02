@@ -1305,13 +1305,14 @@ impl AsymmetricKey {
         }
     }
 
-    /// Signs an attestation certificate for another asymmetric key
+    /// Signs an attestation certificate for this key by another asymmetric key
+    #[deprecated(since="3.0.0", note="Please use `Session::sign_attestation_certificate` instead")]
     pub fn sign_attestation_certificate(
         &self,
         keyid_to_attest: u16,
         session: &Session,
     ) -> Result<Vec<u8>, Error> {
-        session.sign_attestation_certificate(keyid_to_attest, self.key_id)
+        session.sign_attestation_certificate(self.key_id, keyid_to_attest)
         // let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
         // let mut out_len = out.len();
         //
