@@ -1311,24 +1311,25 @@ impl AsymmetricKey {
         keyid_to_attest: u16,
         session: &Session,
     ) -> Result<Vec<u8>, Error> {
-        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
-        let mut out_len = out.len();
-
-        let res = unsafe {
-            lyh::yh_util_sign_attestation_certificate(
-                session.ptr,
-                self.key_id,
-                keyid_to_attest,
-                out.as_mut_ptr(),
-                &mut out_len,
-            )
-        };
-        error::result_from_libyh(res)?;
-
-        let mut out_vec = out.into_vec();
-        out_vec.truncate(out_len);
-
-        Ok(out_vec)
+        session.sign_attestation_certificate(keyid_to_attest, self.key_id)
+        // let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        // let mut out_len = out.len();
+        //
+        // let res = unsafe {
+        //     lyh::yh_util_sign_attestation_certificate(
+        //         session.ptr,
+        //         self.key_id,
+        //         keyid_to_attest,
+        //         out.as_mut_ptr(),
+        //         &mut out_len,
+        //     )
+        // };
+        // error::result_from_libyh(res)?;
+        //
+        // let mut out_vec = out.into_vec();
+        // out_vec.truncate(out_len);
+        //
+        // Ok(out_vec)
     }
 }
 

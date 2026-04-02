@@ -1283,7 +1283,7 @@ impl Session {
     /// Sign attestation certificate
     pub fn sign_attestation_certificate(
         &self,
-        keyid_attest: u16,
+        keyid_attested: u16,
         keyid_attesting: u16,
     ) -> Result<Vec<u8>, Error> {
         let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
@@ -1292,7 +1292,7 @@ impl Session {
         let res = unsafe {
             lyh::yh_util_sign_attestation_certificate(
                 self.ptr,
-                keyid_attest,
+                keyid_attested,
                 keyid_attesting,
                 out.as_mut_ptr(),
                 &mut out_len,
