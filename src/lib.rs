@@ -1523,16 +1523,39 @@ mod test {
     use std::thread;
     use std::time::Duration;
 
-    extern crate base64;
-
     const ENV_VAR: &str = "YUBIHSM_CONNECTOR_URL";
     const CONNECTOR_URL: &str = "http://127.0.0.1:12345";
     const PASSWORD: &str = "password";
-    const WRAPKEY: [u8; 32] = [
+    const AESKEY: [u8; 32] = [
         0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e,
         0x4f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d,
         0x4e, 0x4f,
     ];
+    const RSA2048_PRIVKEY: [u8; 256] = [
+        0xdc, 0x5d, 0xc3, 0x1f, 0xb9, 0x9f, 0x1d, 0x71, 0x55, 0x44, 0xea, 0xd4, 0xf5, 0xd3, 0xeb, 0x6e, 0xda,
+        0xb7, 0x45, 0x33, 0xad, 0x1f, 0x05, 0xd8, 0x35, 0x37, 0xef, 0x17, 0xd5, 0x6d, 0x6f, 0x47, 0xcb, 0x96,
+        0x91, 0x5f, 0xd6, 0xcd, 0xbb, 0x4d, 0xda, 0x8d, 0x9e, 0x85, 0x3c, 0xd5, 0xbe, 0xdc, 0x73, 0x4b, 0x8e,
+        0x33, 0x8d, 0xb4, 0xab, 0x9f, 0xcb, 0x16, 0x92, 0x06, 0xc8, 0xb3, 0xf2, 0x4f, 0x59, 0x6f, 0xf5, 0xc8,
+        0x8d, 0x0a, 0x8d, 0x23, 0x98, 0xfe, 0x7f, 0xc2, 0x81, 0x62, 0xbd, 0x7d, 0x12, 0x2a, 0x29, 0x11, 0x38,
+        0xd4, 0x0f, 0x7b, 0xb8, 0x45, 0xf2, 0x51, 0x4d, 0x76, 0xa7, 0xc7, 0x5a, 0xae, 0xe0, 0xfe, 0x83, 0x36,
+        0x5e, 0x42, 0xc1, 0x23, 0xc4, 0xf4, 0x05, 0x94, 0x9b, 0x2d, 0xdc, 0x46, 0x7d, 0x2d, 0xa8, 0x62, 0xd0,
+        0x51, 0x85, 0x88, 0xa3, 0xbf, 0x10, 0x24, 0x36, 0x4b, 0xb5, 0x8e, 0x74, 0xcc, 0x7e, 0x4c, 0xdc, 0x39,
+        0x0c, 0x46, 0xdf, 0xac, 0xaf, 0x8b, 0x76, 0xe1, 0xde, 0x6c, 0xf4, 0xd3, 0x75, 0x25, 0xd5, 0xa6, 0xe7,
+        0xe8, 0x89, 0x06, 0x92, 0x1d, 0xea, 0xd5, 0x92, 0x62, 0xca, 0x3e, 0x47, 0x33, 0x6d, 0x85, 0x3a, 0xb0,
+        0xc2, 0x47, 0xbe, 0x58, 0xac, 0xda, 0xd8, 0xfc, 0xed, 0xa9, 0xed, 0x3b, 0xfd, 0xa7, 0x05, 0xea, 0x20,
+        0x2f, 0xcb, 0x54, 0x5b, 0x4e, 0xd3, 0x05, 0x94, 0x35, 0x93, 0x7c, 0xf9, 0x83, 0x8a, 0x54, 0x19, 0x27,
+        0xf0, 0x87, 0x54, 0x2e, 0x15, 0xbe, 0xe0, 0x19, 0xac, 0xf3, 0xe6, 0xd7, 0xc5, 0x0a, 0xfa, 0xee, 0xc2,
+        0x16, 0xf5, 0x47, 0x1f, 0xed, 0xde, 0xcd, 0xe2, 0xf4, 0x62, 0x99, 0xa0, 0x73, 0x77, 0x36, 0xf5, 0x5d,
+        0xe1, 0x01, 0xcc, 0x64, 0x8f, 0xc5, 0xd6, 0x10, 0xc0, 0x9f, 0x9c, 0x88, 0x89, 0xc4, 0xd4, 0x20, 0xb9,
+        0xcb,
+    ];
+    const ECP256_PUBKEY: [u8; 65] = [
+        0x04, 0x9d, 0x60, 0xd3, 0x2a, 0x2b, 0x90, 0xbe, 0x57, 0xdf, 0x56, 0x19, 0xe6, 0xba, 0x28, 0x3e, 0x73,
+        0x29, 0xa1, 0xab, 0x1c, 0xe2, 0xf2, 0xed, 0x17, 0xc1, 0x44, 0x46, 0xf1, 0xc2, 0xe6, 0x0b, 0x39, 0x2e,
+        0x96, 0x8c, 0x10, 0xea, 0xb9, 0x41, 0xbc, 0x7c, 0x38, 0x27, 0x90, 0x62, 0x6b, 0xf2, 0x6d, 0x28, 0x31,
+        0x56, 0x25, 0xf1, 0xfb, 0x30, 0xef, 0x52, 0x31, 0x88, 0x61, 0x18, 0x40, 0xa6, 0xcf,
+    ];
+
     const CERT: &str = "MIIC+jCCAeKgAwIBAgIGAWbt9mc3MA0GCSqGSIb3DQEBBQUAMD4xPDA6BgNVBAMM\
                         M0R1bW15IGNlcnRpZmljYXRlIGNyZWF0ZWQgYnkgYSBDRVNlQ29yZSBhcHBsaWNh\
                         dGlvbjAeFw0xODExMDcxMTM3MjBaFw00ODEwMzExMTM3MjBaMD4xPDA6BgNVBAMM\
@@ -1569,6 +1592,16 @@ mod test {
         let hsm = create_hsm!();
 
         println!("{:?}", hsm.get_device_info().unwrap());
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn device_pubkey() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        println!("{:?}", hsm.get_device_pubkey().unwrap());
 
         super::exit().unwrap();
     }
@@ -1761,6 +1794,68 @@ mod test {
     }
 
     #[test]
+    fn generate_wrap_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let id = session
+            .generate_wrap_key(
+                0,
+                "Test wrapkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::ImportWrapped],
+                ObjectAlgorithm::Aes256CcmWrap,
+                &[],
+            )
+            .unwrap();
+
+        let info = session.get_object_info(id, ObjectType::WrapKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session.delete_object(id, ObjectType::WrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn generate_rsa_wrap_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let id = session
+            .generate_wrap_key(
+                0,
+                "Test wrapkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::ImportWrapped],
+                ObjectAlgorithm::Rsa3072,
+                &[],
+            )
+            .unwrap();
+
+        let info = session.get_object_info(id, ObjectType::WrapKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session.delete_object(id, ObjectType::WrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
     fn import_wrap_key() {
         super::init().unwrap();
         let hsm = create_hsm!();
@@ -1775,7 +1870,7 @@ mod test {
                 &[ObjectCapability::ImportWrapped],
                 ObjectAlgorithm::Aes256CcmWrap,
                 &[],
-                &WRAPKEY,
+                &AESKEY,
             )
             .unwrap();
 
@@ -1786,6 +1881,60 @@ mod test {
         println!("{:#?} ", info.unwrap());
 
         session.delete_object(id, ObjectType::WrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn import_rsa_wrap_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let id = session
+            .import_wrap_key(
+                0,
+                "Test wrapkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::ImportWrapped],
+                ObjectAlgorithm::Rsa2048,
+                &[],
+                &RSA2048_PRIVKEY,
+            )
+            .unwrap();
+
+        let info = session.get_object_info(id, ObjectType::WrapKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        let (pubkey, algo) = session.get_pubkey(id, ObjectType::WrapKey).unwrap();
+
+        let pub_id = session
+            .import_public_wrap_key(
+                id,
+                "Test public wrapkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::ExportWrapped],
+                algo,
+                &[],
+                &pubkey,
+            )
+            .unwrap();
+
+        let info = session.get_object_info(pub_id, ObjectType::PublicWrapKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+
+        session.delete_object(id, ObjectType::WrapKey).unwrap();
+        session.delete_object(pub_id, ObjectType::PublicWrapKey).unwrap();
 
         session.close().unwrap();
 
@@ -1813,7 +1962,7 @@ mod test {
                     ObjectCapability::ExportWrapped,
                     ObjectCapability::ExportableUnderWrap,
                 ],
-                &WRAPKEY,
+                &AESKEY,
             )
             .unwrap();
 
@@ -1853,7 +2002,7 @@ mod test {
                     ObjectCapability::DeleteAuthenticationKey,
                     ObjectCapability::DeleteWrapKey,
                 ],
-                &WRAPKEY,
+                &AESKEY,
             )
             .unwrap();
 
@@ -1893,6 +2042,360 @@ mod test {
             .unwrap();
 
         session.delete_object(wrap_id, ObjectType::WrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn import_rsa_wrapped_object() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let auth_id = session
+            .import_authentication_key(
+                0,
+                "Test authkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &vec![
+                    ObjectCapability::DeleteAuthenticationKey,
+                    ObjectCapability::DeleteWrapKey,
+                    ObjectCapability::DeletePublicWrapKey,
+                    ObjectCapability::ExportableUnderWrap,
+                ],
+                &vec![],
+                "PASSWORD".as_bytes(),
+            )
+            .unwrap();
+
+        let wrap_id = session
+            .import_wrap_key(
+                0,
+                "Test RSA wrap object",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[
+                    ObjectCapability::ImportWrapped,
+                ],
+                ObjectAlgorithm::Rsa2048,
+                &[
+                    ObjectCapability::ExportWrapped,
+                    ObjectCapability::ExportableUnderWrap,
+                    ObjectCapability::DeleteAuthenticationKey,
+                    ObjectCapability::DeletePublicWrapKey,
+                    ObjectCapability::DeleteWrapKey,
+                ],
+                &RSA2048_PRIVKEY,
+            ).unwrap();
+
+        let (pubkey, algo) = session.get_pubkey(wrap_id, ObjectType::WrapKey).unwrap();
+
+        let pub_wrap_id = session
+            .import_public_wrap_key(
+                wrap_id,
+                "Test RSA wrap object",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[
+                    ObjectCapability::ExportWrapped,
+                ],
+                algo,
+                &[
+                    ObjectCapability::ExportWrapped,
+                    ObjectCapability::ExportableUnderWrap,
+                    ObjectCapability::DeleteAuthenticationKey,
+                    ObjectCapability::DeletePublicWrapKey,
+                    ObjectCapability::DeleteWrapKey,
+                ],
+                &pubkey,
+            ).unwrap();
+
+        let oaep_label = session.get_random(32).unwrap();
+
+        let wrapped = session.export_rsa_wrapped_object(
+            pub_wrap_id,
+            ObjectType::AuthenticationKey,
+            auth_id,
+            ObjectAlgorithm::Aes256,
+            ObjectAlgorithm::RsaOaepSha256,
+            ObjectAlgorithm::Mgf1Sha256,
+            &oaep_label,
+        ).unwrap();
+
+        println!("{:?} ", wrapped);
+
+        session
+            .delete_object(auth_id, ObjectType::AuthenticationKey)
+            .unwrap();
+
+        session.import_rsa_wrapped_object(
+            wrap_id,
+            ObjectAlgorithm::RsaOaepSha256,
+            ObjectAlgorithm::Mgf1Sha256,
+            &oaep_label,
+            &wrapped
+        ).unwrap();
+
+        session.close().unwrap();
+
+        let session = hsm.establish_session(auth_id, "PASSWORD", true).unwrap();
+
+        session
+            .delete_object(auth_id, ObjectType::AuthenticationKey)
+            .unwrap();
+
+        session.delete_object(wrap_id, ObjectType::WrapKey).unwrap();
+        session.delete_object(pub_wrap_id, ObjectType::PublicWrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn import_rsa_wrapped_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let sym_id = session
+            .import_aes_key(
+                0,
+                "Test symkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &vec![
+                    ObjectCapability::EncryptEcb,
+                    ObjectCapability::DecryptEcb,
+                    ObjectCapability::ExportableUnderWrap,
+                ],
+                ObjectAlgorithm::Aes256,
+                &AESKEY,
+            )
+            .unwrap();
+
+        let data = session.get_random(16).unwrap();
+        let encrypted = session.encrypt_aes_ecb(sym_id, &data).unwrap();
+
+        let wrap_id = session
+            .import_wrap_key(
+                0,
+                "Test RSA wrap key",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[
+                    ObjectCapability::ImportWrapped,
+                ],
+                ObjectAlgorithm::Rsa2048,
+                &[
+                    ObjectCapability::ExportableUnderWrap,
+                    ObjectCapability::EncryptEcb,
+                    ObjectCapability::DecryptEcb,
+                ],
+                &RSA2048_PRIVKEY,
+            ).unwrap();
+
+        let (pubkey, algo) = session.get_pubkey(wrap_id, ObjectType::WrapKey).unwrap();
+
+        let pub_wrap_id = session
+            .import_public_wrap_key(
+                wrap_id,
+                "Test RSA wrap key",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[
+                    ObjectCapability::ExportWrapped,
+                ],
+                algo,
+                &[
+                    ObjectCapability::ExportableUnderWrap,
+                    ObjectCapability::EncryptEcb,
+                    ObjectCapability::DecryptEcb,
+                ],
+                &pubkey,
+            ).unwrap();
+
+        // let oaep_label: &[u8] = &[];
+        let oaep_label = session.get_random(32).unwrap();
+
+        let wrapped = session.export_rsa_wrapped_key(
+            pub_wrap_id,
+            ObjectType::SymmetricKey,
+            sym_id,
+            ObjectAlgorithm::Aes256,
+            ObjectAlgorithm::RsaOaepSha256,
+            ObjectAlgorithm::Mgf1Sha256,
+            &oaep_label,
+        ).unwrap();
+
+        println!("{:?} ", wrapped);
+
+        session
+            .delete_object(sym_id, ObjectType::SymmetricKey)
+            .unwrap();
+
+        let imported_handle = session.import_rsa_wrapped_key(
+            wrap_id,
+            ObjectType::SymmetricKey,
+            0,
+            ObjectAlgorithm::Aes256,
+            "Test RSA wrapped key",
+            &ObjectDomain::vec_from_str("all").unwrap(),
+            &[ObjectCapability::EncryptEcb, ObjectCapability::DecryptEcb, ObjectCapability::ExportableUnderWrap],
+            ObjectAlgorithm::RsaOaepSha256,
+            ObjectAlgorithm::Mgf1Sha256,
+            &oaep_label,
+            &wrapped).unwrap();
+
+        session.close().unwrap();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let decrypted = session.decrypt_aes_ecb(imported_handle.object_id, &encrypted).unwrap();
+        assert_eq!(data, decrypted);
+
+        session.delete_object(imported_handle.object_id, imported_handle.object_type).unwrap();
+
+        session.delete_object(wrap_id, ObjectType::WrapKey).unwrap();
+        session.delete_object(pub_wrap_id, ObjectType::PublicWrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+
+    #[test]
+    fn generate_symmetric_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let capabilities = vec![
+            ObjectCapability::EncryptCbc,
+            ObjectCapability::DecryptCbc,
+            ObjectCapability::ExportableUnderWrap,
+        ];
+
+        let key_id = session
+            .generate_aes_key(
+                0,
+                "Test symmetric key generation",
+                &capabilities,
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                ObjectAlgorithm::Aes192,
+            )
+            .unwrap();
+
+        session.close().unwrap();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let info = session.get_object_info(key_id, ObjectType::SymmetricKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session
+            .delete_object(key_id, ObjectType::SymmetricKey)
+            .unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn import_symmetric_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let id = session
+            .import_aes_key(
+                0,
+                "Test aeskey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::EncryptEcb, ObjectCapability::DecryptEcb],
+                ObjectAlgorithm::Aes256,
+                &AESKEY,
+            )
+            .unwrap();
+
+        let info = session.get_object_info(id, ObjectType::SymmetricKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session.delete_object(id, ObjectType::SymmetricKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+
+    #[test]
+    fn encrypt_ecb() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let key_id = session
+            .generate_aes_key(
+                0,
+                "aeskey",
+                &[ObjectCapability::EncryptEcb, ObjectCapability::DecryptEcb],
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                ObjectAlgorithm::Aes128,
+            )
+            .unwrap();
+
+        let data = session.get_random(16).unwrap();
+
+        let encrypted = session.encrypt_aes_ecb(key_id, &data).unwrap();
+        assert_ne!(data, encrypted);
+        let decrypted = session.decrypt_aes_ecb(key_id, &encrypted).unwrap();
+        assert_eq!(data, decrypted);
+
+        session.delete_object(key_id, ObjectType::SymmetricKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn encrypt_cbc() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let key_id = session
+            .import_aes_key(
+                0,
+                "aeskey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::EncryptCbc, ObjectCapability::DecryptCbc],
+                ObjectAlgorithm::Aes256,
+                &AESKEY,
+            )
+            .unwrap();
+
+        let data = session.get_random(32).unwrap();
+        let iv = session.get_random(16).unwrap();
+
+        let encrypted = session.encrypt_aes_cbc(key_id, &iv, &data).unwrap();
+        assert_ne!(data, encrypted);
+        let decrypted = session.decrypt_aes_cbc(key_id, &iv, &encrypted).unwrap();
+        assert_eq!(data, decrypted);
+
+        session.delete_object(key_id, ObjectType::SymmetricKey).unwrap();
 
         session.close().unwrap();
 
@@ -1979,6 +2482,7 @@ mod test {
         super::exit().unwrap();
     }
 
+    #[test]
     fn generate_asymmetric_key_with_keyid() {
         super::init().unwrap();
         let hsm = create_hsm!();
@@ -2014,6 +2518,32 @@ mod test {
         session
             .delete_object(key.get_key_id(), ObjectType::AsymmetricKey)
             .unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn derive_ecdh() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let key = session
+            .generate_asymmetric_key(
+                "Test ecdh",
+                &[ObjectCapability::DeriveEcdh],
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                ObjectAlgorithm::EcP256,
+            )
+            .unwrap();
+
+        let ecdh = session.derive_ecdh(key.get_key_id(), &ECP256_PUBKEY).unwrap();
+        println!("{:#?} ", ecdh);
+
+        session.delete_object(key.get_key_id(), ObjectType::AsymmetricKey).unwrap();
 
         session.close().unwrap();
 
