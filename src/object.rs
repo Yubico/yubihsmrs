@@ -350,25 +350,25 @@ pub enum ObjectOrigin {
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ObjectDescriptor {
     /// Capabilities
-    pub capabilities: Vec<ObjectCapability>,
+    capabilities: Vec<ObjectCapability>,
     /// Id
-    pub id: u16,
+    id: u16,
     /// Size/Length
     len: u16,
     /// Domains
-    pub domains: Vec<ObjectDomain>,
+    domains: Vec<ObjectDomain>,
     /// Type
-    pub object_type: ObjectType,
+    object_type: ObjectType,
     /// Algorithm
-    pub algorithm: ObjectAlgorithm,
+    algorithm: ObjectAlgorithm,
     /// Sequence
-    pub sequence: u8,
+    sequence: u8,
     /// Origin
-    pub origin: ObjectOrigin,
+    origin: ObjectOrigin,
     /// Label
-    pub label: String,
+    label: String,
     /// Delegated Capabilities
-    pub delegated_capabilities: Option<Vec<ObjectCapability>>,
+    delegated_capabilities: Option<Vec<ObjectCapability>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -999,20 +999,107 @@ impl ObjectOrigin {
 
 impl ObjectDescriptor {
 
-    /// Implement an empty ObjectDescriptor
-    pub fn new() -> ObjectDescriptor {
-        ObjectDescriptor {
-            capabilities: Vec::new(),
-            id: 0,
+    /// Implement a new ObjectDescriptor
+    pub fn new(
+        object_id: u16,
+        object_type: ObjectType,
+        label: String,
+        algorithm: ObjectAlgorithm,
+        domains: Vec<ObjectDomain>,
+        capabilities: Vec<ObjectCapability>,
+        delegated_capabilities: Option<Vec<ObjectCapability>>) -> Self {
+        Self {
+            capabilities,
+            id: object_id,
             len: 0,
-            domains: Vec::new(),
-            object_type: ObjectType::Any,
-            algorithm: ObjectAlgorithm::ANY,
+            domains,
+            object_type,
+            algorithm,
             sequence: 0,
             origin: ObjectOrigin::Generated,
-            label: "".to_string(),
-            delegated_capabilities: None,
+            label,
+            delegated_capabilities,
         }
+    }
+
+    /// Get the object ID
+    pub fn object_id(&self) -> u16 {
+        self.id
+    }
+
+    /// Set the object ID
+    pub fn set_object_id(&mut self, object_id: u16) {
+        self.id = object_id;
+    }
+
+    /// Get the object type
+    pub fn object_type(&self) -> &ObjectType {
+        &self.object_type
+    }
+
+    /// Set the object type
+    pub fn set_object_type(&mut self, object_type: ObjectType) {
+        self.object_type = object_type;
+    }
+
+    /// Get the label of the object
+    pub fn label(&self) -> String {
+        self.label.clone()
+    }
+
+    // /// Set the label of the object
+    // pub fn set_label(&mut self, label: String) {
+    //     self.label = label;
+    // }
+
+    /// Get the algorithm of the object
+    pub fn algorithm(&self) -> &ObjectAlgorithm {
+        &self.algorithm
+    }
+
+    /// Set the algorithm of the object
+    pub fn set_algorithm(&mut self, algorithm: ObjectAlgorithm) {
+        self.algorithm = algorithm;
+    }
+
+    /// Get the domains of the object
+    pub fn domains(&self) -> &Vec<ObjectDomain> {
+        &self.domains
+    }
+
+    // /// Set the domains of the object
+    // pub fn set_domains(&mut self, domains: Vec<ObjectDomain>) {
+    //     self.domains = domains;
+    // }
+
+    /// Get the origin of the object
+    pub fn origin(&self) -> &ObjectOrigin {
+        &self.origin
+    }
+
+    /// Set the origin of the object
+    pub fn sequence(&self) -> u8 {
+        self.sequence
+    }
+
+    /// Get the capabilities of the object
+    pub fn capabilities(&self) -> &Vec<ObjectCapability> {
+        &self.capabilities
+    }
+
+    /// Set the capabilities of the object
+    pub fn set_capabilities(&mut self, capabilities: Vec<ObjectCapability>) {
+        self.capabilities = capabilities;
+    }
+
+    /// Get the delegated capabilities of the object
+    pub fn delegated_capabilities(&self) -> &Option<Vec<ObjectCapability>> {
+        &self.delegated_capabilities
+    }
+
+    /// Set the delegated capabilities of the object
+    pub fn set_delegated_capabilities(&mut self, delegated_capabilities: Option<Vec<ObjectCapability>>) {
+        self.delegated_capabilities = delegated_capabilities;
     }
 }
 
