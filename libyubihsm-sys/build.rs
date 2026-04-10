@@ -50,12 +50,15 @@ mod build {
 mod build {
     extern crate pkg_config;
     use std::env;
-    use std::path::Path;
+    // use std::path::Path;
 
     pub fn main() {
 
         // Directory override
         if let Ok(lib_dir) = env::var("YUBIHSM_LIB_DIR") {
+
+            println!("cargo:rustc-link-search={}", lib_dir);
+
             // 1. If YUBIHSM_LIB_NAME provided -> use it.
             // 2. Else if Windows MSVC -> prefer "libyubihsm" (matches to libyubihsm.lib).
             // 3. Else default to "yubihsm".
@@ -70,21 +73,23 @@ mod build {
                 }
             };
 
-            // Emit native search path
-            println!("cargo:rustc-link-search=native={}", lib_dir);
+            let link_static = env::var("YUBIHSM_STATIC").is_ok();
 
             // Informational (can be seen in build output with --verbose)
-            println!("cargo:warning=Linking against '{}' from '{}'", lib_name, lib_dir);
+            println!("cargo:warning=Linking against '{}' from '{}' (static={})", lib_name, lib_dir, link_static);
 
-            // Sanity check: if MSVC and we chose libyubihsm, verify file exists (non-fatal warning)
-            if cfg!(all(target_os = "windows", target_env = "msvc")) {
-                let lib_path = Path::new(&lib_dir).join(format!("{}.lib", lib_name));
-                if !lib_path.exists() {
-                    println!("cargo:warning=Expected library file '{}' was not found; build may fail", lib_path.display());
+            if link_static {
+                #[cfg(target_os = "linux")]
+                {
+                    println!("cargo:warning=Static linking: skipping rustc-link-lib, archive will be linked by binary crate");
                 }
+                #[cfg(not(target_os = "linux"))]
+                {
+                    println!("cargo:rustc-link-lib=static:-bundle={}", lib_name);
+                }
+            } else {
+                println!("cargo:rustc-link-lib={}", lib_name);
             }
-
-            println!("cargo:rustc-link-lib={}", lib_name);
         } else {
             pkg_config::Config::new()
                 .atleast_version("1.1.0")
