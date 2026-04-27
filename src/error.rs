@@ -63,10 +63,15 @@ impl error::Error for Error {
 }
 
 /// Function to translate YubiHSM2 errors
-pub fn result_from_libyh(code: lyh::yh_rc) -> ::std::result::Result<(), Error> {
+pub fn result_from_libyh(code: lyh::yh_rc) -> Result<(), Error> {
+    result_from_libyh_enum(code.into())
+}
+
+/// Function to translate YubiHSM2 errors from enum
+pub fn result_from_libyh_enum(code: lyh::yh_rc_enum) -> Result<(), Error> {
     match code {
-        lyh::yh_rc::YHR_SUCCESS => Ok(()),
-        err => Err(Error::LibYubiHsm(lyh::Error::new(err))),
+        lyh::yh_rc_enum::YHR_SUCCESS => Ok(()),
+        _ => Err(Error::LibYubiHsm(code.into())),
     }
 }
 

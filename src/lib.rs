@@ -41,7 +41,7 @@ extern crate rustc_serialize;
 extern crate serde;
 
 use std::fmt::Display;
-use lyh::{yh_algorithm, yh_connector, yh_rc, yh_session, YH_EC_P256_PRIVKEY_LEN, YH_EC_P256_PUBKEY_LEN};
+use lyh::{yh_algorithm, yh_connector, yh_rc_enum, yh_session, YH_EC_P256_PRIVKEY_LEN, YH_EC_P256_PUBKEY_LEN};
 
 pub mod error;
 use error::Error;
@@ -93,7 +93,7 @@ impl Display for DeviceInfo {
         info.push_str(format!("Log used:\t\t\t {}/{}\n", self.log_used, self.log_total).as_str());
 
         let mut algo_str = String::new().to_owned();
-        self.algorithms.iter().for_each(|a| algo_str.push_str(format!("{},", ObjectAlgorithm::from(a)).as_str()));
+        self.algorithms.iter().for_each(|a| algo_str.push_str(format!("{},", ObjectAlgorithm::from(*a)).as_str()));
         info.push_str(format!("Supported algorithms:\t {}\t", algo_str).as_str());
         write!(f, "{}", info)
     }
@@ -204,7 +204,7 @@ impl YubiHsm {
         let mut log_total = 0;
         let mut log_used = 0;
         let mut algorithms =
-            [yh_algorithm::YH_ALGO_RSA_PKCS1_SHA1; lyh::YH_MAX_ALGORITHM_COUNT];
+            [0; lyh::YH_MAX_ALGORITHM_COUNT];
         let mut n_algorithms = lyh::YH_MAX_ALGORITHM_COUNT;
 
         unsafe {
@@ -238,7 +238,7 @@ impl YubiHsm {
     pub fn get_device_pubkey(&self) -> Result<Vec<u8>, Error> {
         let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
         let mut out_len = out.len();
-        let mut key_algorithm = yh_algorithm::YH_ALGO_ANY;
+        let mut key_algorithm = 0;
 
         let res = unsafe {
             lyh::yh_util_get_device_pubkey (
@@ -293,7 +293,8 @@ impl Session {
             res = lyh::yh_util_close_session(self.ptr);
         }
 
-        if res != yh_rc::YHR_SUCCESS && res != yh_rc::YHR_DEVICE_INV_SESSION {
+        let e = yh_rc_enum::from(res);
+        if e != yh_rc_enum::YHR_SUCCESS && e != yh_rc_enum::YHR_DEVICE_INV_SESSION {
             return error::result_from_libyh(res);
         }
 
@@ -302,7 +303,8 @@ impl Session {
             res = lyh::yh_destroy_session(&self.ptr);
         }
 
-        if res != yh_rc::YHR_SUCCESS {
+        let e = yh_rc_enum::from(res);
+        if e != yh_rc_enum::YHR_SUCCESS {
             return error::result_from_libyh(res);
         }
 
@@ -326,10 +328,10 @@ impl Session {
             lyh::yh_util_list_objects(
                 self.ptr,
                 obj_id,
-                lyh::yh_object_type::from(obj_type),
+                obj_type.into(),
                 0,
                 &ObjectCapability::primitive_from_slice(object_capabilities),
-                yh_algorithm::from(algorithm),
+                algorithm.into(),
                 c_str.as_ptr(),
                 objects.as_mut_ptr(),
                 &mut n_objects,
@@ -656,7 +658,7 @@ impl Session {
                 c_str.as_ptr(),
                 ObjectDomain::primitive_from_slice(domains),
                 &ObjectCapability::primitive_from_slice(capabilities),
-                yh_algorithm::YH_ALGO_EC_ED25519,
+                ObjectAlgorithm::Ed25519.into(),
                 k.as_ptr(),
             )
         };
@@ -717,7 +719,7 @@ impl Session {
                 c_str.as_ptr(),
                 ObjectDomain::primitive_from_slice(domains),
                 &ObjectCapability::primitive_from_slice(&capabilities),
-                yh_algorithm::YH_ALGO_OPAQUE_X509_CERTIFICATE,
+                ObjectAlgorithm::OpaqueX509Certificate.into(),
                 cert.as_ptr(),
                 cert.len(),
             )
@@ -801,7 +803,7 @@ impl Session {
         wrapping_key_id: u16,
         bytes: &[u8],
     ) -> Result<ObjectHandle, Error> {
-        let mut object_type: lyh::yh_object_type = lyh::yh_object_type::default();
+        let mut object_type: lyh::yh_object_type = ObjectType::Any.into();
         let mut id: u16 = 0;
 
         let res = unsafe {
@@ -818,7 +820,7 @@ impl Session {
 
         Ok(ObjectHandle {
             object_id: id,
-            object_type: (&object_type).into(),
+            object_type: object_type.into(),
         })
     }
 
@@ -949,7 +951,7 @@ impl Session {
         oaep_label: &[u8],
         bytes: &[u8],
     ) -> Result<ObjectHandle, Error> {
-        let mut object_type: lyh::yh_object_type = lyh::yh_object_type::default();
+        let mut object_type: lyh::yh_object_type = ObjectType::Any.into();
         let mut id: u16 = 0;
 
         let res = unsafe {
@@ -970,7 +972,7 @@ impl Session {
 
         Ok(ObjectHandle {
             object_id: id,
-            object_type: (&object_type).into(),
+            object_type: object_type.into(),
         })
     }
 
@@ -1120,7 +1122,7 @@ impl Session {
     ) -> Result<(Vec<u8>, ObjectAlgorithm), Error> {
         let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
         let mut out_len = out.len();
-        let mut key_algorithm = yh_algorithm::YH_ALGO_ANY;
+        let mut key_algorithm = 0;
 
         let res = unsafe {
             lyh::yh_util_get_public_key_ex(
