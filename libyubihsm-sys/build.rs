@@ -49,14 +49,46 @@ mod build {
 #[cfg(not(feature = "buildlib"))]
 mod build {
     extern crate pkg_config;
-
     use std::env;
 
     pub fn main() {
+
+        // Directory override
         if let Ok(lib_dir) = env::var("YUBIHSM_LIB_DIR") {
-            //.expect("Environment variable YUBIHSM_LIB_DIR not defined");
-            println!("cargo:rustc-link-lib=yubihsm");
+
             println!("cargo:rustc-link-search={}", lib_dir);
+
+            // 1. If YUBIHSM_LIB_NAME provided -> use it.
+            // 2. Else if Windows MSVC -> prefer "libyubihsm" (matches to libyubihsm.lib).
+            // 3. Else default to "yubihsm".
+            let lib_name = match env::var("YUBIHSM_LIB_NAME") {
+                Ok(name) => name,
+                Err(_) => {
+                    if cfg!(all(target_os = "windows", target_env = "msvc")) {
+                        "libyubihsm".to_string()
+                    } else {
+                        "yubihsm".to_string()
+                    }
+                }
+            };
+
+            let link_static = env::var("YUBIHSM_STATIC").is_ok();
+
+            // Informational (can be seen in build output with --verbose)
+            println!("cargo:warning=Linking against '{}' from '{}' (static={})", lib_name, lib_dir, link_static);
+
+            if link_static {
+                #[cfg(target_os = "linux")]
+                {
+                    println!("cargo:warning=Static linking: skipping rustc-link-lib, archive will be linked by binary crate");
+                }
+                #[cfg(not(target_os = "linux"))]
+                {
+                    println!("cargo:rustc-link-lib=static:-bundle={}", lib_name);
+                }
+            } else {
+                println!("cargo:rustc-link-lib={}", lib_name);
+            }
         } else {
             pkg_config::Config::new()
                 .atleast_version("1.1.0")

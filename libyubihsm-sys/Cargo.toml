@@ -17,13 +17,14 @@
 [package]
 name = "libyubihsm-sys"
 version = "2.0.0"
-authors = ["Alessio Di Mauro <alessio@yubico.com>"]
+authors = ["Alessio Di Mauro <alessio@yubico.com>", "Aveen Ismail <aveen.ismail@yubico.com>"]
 description = "Native bindings to libyubihsm"
 license = "Apache-2.0"
 links = "libyubihsm"
 build = "build.rs"
 keywords = ["yubico", "hsm", "ffi"]
 categories = ["external-ffi-bindings"]
+edition = "2024"
 
 [features]
 default = ["pkg-config"]

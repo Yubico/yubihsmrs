@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! Module for handling error from the YubiHSM2
+
 use lyh;
 use std::error;
 use std::fmt;
@@ -42,6 +44,7 @@ impl fmt::Display for Error {
 }
 
 impl error::Error for Error {
+    /*
     fn description(&self) -> &str {
         match *self {
             Error::LibYubiHsm(ref err) => err.description(),
@@ -49,7 +52,7 @@ impl error::Error for Error {
             Error::InvalidParameter(_) => "Invalid parameter",
         }
     }
-
+    */
     fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             Error::LibYubiHsm(ref err) => Some(err),
@@ -59,8 +62,7 @@ impl error::Error for Error {
     }
 }
 
-// Public but not re-exported by lib.rs, so only visible within crate.
-
+/// Function to translate YubiHSM2 errors
 pub fn result_from_libyh(code: lyh::yh_rc) -> ::std::result::Result<(), Error> {
     match code {
         lyh::yh_rc::YHR_SUCCESS => Ok(()),

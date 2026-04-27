@@ -74,6 +74,10 @@ pub const YH_MAX_LOG_ENTRIES: c_uint = 64;
 pub const YH_OBJ_LABEL_LEN: usize = 40;
 /// Max number of domains
 pub const YH_MAX_DOMAINS: c_uint = 16;
+/// Lenth of private ECP256 key derived for asymmetric authentication
+pub const YH_EC_P256_PRIVKEY_LEN: usize = 32;
+/// Lenth of public ECP256 key derived for asymmetric authentication
+pub const YH_EC_P256_PUBKEY_LEN: usize = 65;
 
 // Verbosity levels
 /// Verbosity disabled
@@ -381,6 +385,8 @@ pub enum yh_object_type {
     YH_AUTHENTICATION_KEY = 0x02,
     /// Asymmetric key
     YH_ASYMMETRIC_KEY = 0x03,
+    /// Symmetric key
+    YH_SYMMETRIC_KEY = 0x08,
     /// Wrap key
     YH_WRAP_KEY = 0x04,
     /// HMAC key
@@ -389,6 +395,8 @@ pub enum yh_object_type {
     YH_TEMPLATE = 0x06,
     /// OTP AEAD key
     YH_OTP_AEAD_KEY = 0x07,
+    /// Public Wrap Key
+    YH_PUBLIC_WRAP_KEY = 0x09,
     /// Public key (virtual)
     YH_PUBLIC_KEY = 0x83,
 }
@@ -501,6 +509,20 @@ pub enum yh_algorithm {
     YH_ALGO_EC_P224 = 47,
     /// RSA PKCS1v1.5 decrypt
     YH_ALGO_RSA_PKCS1_DECRYPT = 48,
+    /// ec-p256-yubico-authentication
+    YH_ALGO_EC_P256_YUBICO_AUTHENTICATION = 49,
+    /// aes128
+    YH_ALGO_AES128 = 50,
+    /// aes192
+    YH_ALGO_AES192 = 51,
+    /// aes256
+    YH_ALGO_AES256 = 52,
+    /// aes-ecb
+    YH_ALGO_AES_ECB = 53,
+    /// aes-cbc
+    YH_ALGO_AES_CBC = 54,
+    /// aes-kwp
+    YH_ALGO_AES_KWP = 55,
 }
 
 impl Default for yh_algorithm {
@@ -903,7 +925,7 @@ fn bindgen_test_layout_yh_cap() {
     );
 }
 
-extern "C" {
+unsafe extern "C" {
     #[link_name = "yh_capability"]
     /// Object capabilities
     pub static mut yh_capability: [yh_cap; 47usize];
@@ -955,7 +977,7 @@ fn bindgen_test_layout_yh_algo() {
     );
 }
 
-extern "C" {
+unsafe extern "C" {
     #[link_name = "yh_algorithms"]
     /// Object and function algorithm
     pub static mut yh_algorithms: [yh_algo; 46usize];
@@ -1007,7 +1029,7 @@ fn bindgen_test_layout_yh_ot() {
     );
 }
 
-extern "C" {
+unsafe extern "C" {
     #[link_name = "yh_types"]
     /// Object type
     pub static mut yh_types: [yh_ot; 7usize];
@@ -1059,13 +1081,13 @@ fn bindgen_test_layout_yh_opt() {
     );
 }
 
-extern "C" {
+unsafe extern "C" {
     #[link_name = "yh_options"]
     /// Device global setting
     pub static mut yh_options: [yh_opt; 2usize];
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Return a string describing an error condition
      *
@@ -1076,7 +1098,7 @@ extern "C" {
     pub fn yh_strerror(err: yh_rc) -> *const c_char;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Set verbosity
      * This function may be called prior to global library initialization.
@@ -1088,7 +1110,7 @@ extern "C" {
     pub fn yh_set_verbosity(connector: *const yh_connector, verbosity: u8) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get verbosity
      *
@@ -1099,7 +1121,7 @@ extern "C" {
     pub fn yh_get_verbosity(verbosity: *mut u8) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Global library initialization
      *
@@ -1108,7 +1130,7 @@ extern "C" {
     pub fn yh_init() -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Global library cleanup
      *
@@ -1117,7 +1139,7 @@ extern "C" {
     pub fn yh_exit() -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Instantiate a new connector
      *
@@ -1129,7 +1151,7 @@ extern "C" {
 
 // TODO(adma): FIXME set_connector_options
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Connect to connector
      *
@@ -1140,7 +1162,7 @@ extern "C" {
     pub fn yh_connect(connectors: *const yh_connector) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Disconnect from connector
      *
@@ -1151,7 +1173,7 @@ extern "C" {
     pub fn yh_disconnect(connector: *const yh_connector) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Send a plain message to a connector
      *
@@ -1176,7 +1198,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Send an encrypted message over a session
      *
@@ -1200,7 +1222,7 @@ extern "C" {
         response_len: *mut usize,
     ) -> yh_rc;
 }
-extern "C" {
+unsafe extern "C" {
     /**
      * Create a session with keys derived frm password
      *
@@ -1223,7 +1245,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Create a session
      *
@@ -1249,8 +1271,33 @@ extern "C" {
         session: *const *mut yh_session,
     ) -> yh_rc;
 }
+unsafe extern "C" {
+    /**
+     * Create and authenticate a session using asymmetric authentication key
+     *
+     * @param connector connector to create the session with
+     * @param authkey_id ID of the authentication key
+     * @param privkey client private ECP256 key
+     * @param privkey_len length of client private ECP256 key
+     * @param device_pubkey device public key
+     * @param device_pubkey_len length of device public key
+     * @param session created session
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_create_session_asym(
+        connector: *const yh_connector,
+        authkey_id: u16,
+        privkey: *const u8,
+        privkey_len: usize,
+        device_pubkey: *const u8,
+        device_pubkey_len: usize,
+        session: *const *mut yh_session,
+    ) -> yh_rc;
+}
 
-extern "C" {
+
+unsafe extern "C" {
     /**
      * Begin create extenal session
      *
@@ -1273,7 +1320,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Finish creating external session
      *
@@ -1304,7 +1351,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Free data associated with session
      *
@@ -1315,7 +1362,7 @@ extern "C" {
     pub fn yh_destroy_session(session: *const *mut yh_session) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Authenticate session
      *
@@ -1326,7 +1373,7 @@ extern "C" {
     pub fn yh_authenticate_session(session: *const yh_session) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get device info
      *
@@ -1355,7 +1402,26 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
+    /**
+     * Get device public key
+     *
+     * @param connector connector to send over
+     * @param pubkey Device public key
+     * @param pubkey_len Device public key length
+     * @param algorithm Algorithm of device public key
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_get_device_pubkey(
+        connector: *const yh_connector,
+        pubkey: *mut u8,
+        pubkey_len: *mut usize,
+        algorithm: *mut yh_algorithm,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
     /**
      * List objects
      *
@@ -1386,7 +1452,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get object info
      *
@@ -1405,9 +1471,9 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
-     * Get Public key
+     * Get Public key with the specified ID
      *
      * @param session session to use
      * @param id Object ID
@@ -1426,7 +1492,30 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
+    /**
+     * Get Public key with the specified ID and type
+     *
+     * @param session session to use
+     * @param key_type Object type
+     * @param id Object ID
+     * @param data Data out
+     * @param data_len Data length
+     * @param algorithm Algorithm of object
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_get_public_key_ex(
+        session: *const yh_session,
+        key_type: yh_object_type,
+        id: u16,
+        data: *mut u8,
+        data_len: *mut usize,
+        algorithm: *mut yh_algorithm,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
     /**
      * Close session
      *
@@ -1437,7 +1526,7 @@ extern "C" {
     pub fn yh_util_close_session(session: *mut yh_session) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign data using PKCS1 v1.5
      *
@@ -1462,7 +1551,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign data using RSS
      *
@@ -1489,7 +1578,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign data using ECDSA
      *
@@ -1512,7 +1601,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign data using EDDSA
      *
@@ -1535,7 +1624,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign data using HMAC
      *
@@ -1558,7 +1647,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get pseudo random data
      *
@@ -1577,7 +1666,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import RSA key
      *
@@ -1604,7 +1693,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import EC key
      *
@@ -1629,7 +1718,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import ED key
      *
@@ -1654,7 +1743,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import HMAC key
      *
@@ -1681,7 +1770,32 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
+    /**
+     * Import AES key
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param label Label
+     * @param domains domains
+     * @param capabilities capabilities
+     * @param algorithm algorithm
+     * @param key key data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_import_aes_key(
+        session: *const yh_session,
+        key_id: *mut u16,
+        label: *const c_char,
+        domains: u16,
+        capabilities: *const yh_capabilities,
+        algorithm: yh_algorithm,
+        key: *const u8,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
     /**
      * Generate RSA key
      *
@@ -1704,7 +1818,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Generate EC key
      *
@@ -1727,7 +1841,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Generate ED key
      *
@@ -1750,7 +1864,30 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
+    /**
+     * Generate AES key
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param label Label
+     * @param domains domains
+     * @param capabilities capabilities
+     * @param algorithm algorithm
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_generate_aes_key(
+        session: *const yh_session,
+        key_id: *mut u16,
+        label: *const c_char,
+        domains: u16,
+        capabilities: *const yh_capabilities,
+        algorithm: yh_algorithm,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
     /**
      * Verify HMAC data
      *
@@ -1775,7 +1912,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Generate HMAC key
      *
@@ -1798,7 +1935,103 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
+    /**
+     * Encrypt data using AES ECB
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param in plain text data in multiple of 16 bytes
+     * @param in_len length of plain text data
+     * @param out Encrypted data
+     * @param out_len length of encrypted data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_encrypt_aes_ecb(
+        session: *const yh_session,
+        key_id: u16,
+        in_: *const u8,
+        in_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
+    /**
+     * Encrypt data using AES CBC
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param iv 16 bytes IV
+     * @param in plain text data in multiple of 16 bytes
+     * @param in_len length of plain text data
+     * @param out Encrypted data
+     * @param out_len length of encrypted data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_encrypt_aes_cbc(
+        session: *const yh_session,
+        key_id: u16,
+        iv: *const u8,
+        in_: *const u8,
+        in_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
+    /**
+     * Decrypt data using AES ECB
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param in Encrypted data
+     * @param in_len length of encrypted data
+     * @param out Decrypted data
+     * @param out_len length of decrypted data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_decrypt_aes_ecb(
+        session: *const yh_session,
+        key_id: u16,
+        in_: *const u8,
+        in_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
+    /**
+     * Decrypt data using AES CBC
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param iv 16 bytes IV
+     * @param in Encrypted data
+     * @param in_len length of encrypted data
+     * @param out Decrypted data
+     * @param out_len length of decrypted data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_decrypt_aes_cbc(
+        session: *const yh_session,
+        key_id: u16,
+        iv: *const u8,
+        in_: *const u8,
+        in_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
     /**
      * Decrypt PKCS1 v1.5 data
      *
@@ -1821,7 +2054,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Decrypt OAEP data
      *
@@ -1850,7 +2083,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Perform ECDH key exchange
      *
@@ -1873,7 +2106,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Delete an object
      *
@@ -1890,7 +2123,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Export an object under wrap
      *
@@ -1913,7 +2146,32 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
+    /**
+     * Export an object under wrap from the device with the option to include the ED25519 seed
+     *
+     * @param session session to use
+     * @param wrapping_key_id ID of wrapping key
+     * @param target_type Type of object
+     * @param target_id ID of object
+     * @param format format of the wrapped data. Currently supported formats: 0=legacy 1=include ED25519 seed
+     * @param out wrapped data
+     * @param out_len length of wrapped data
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_export_wrapped_ex(
+        session: *const yh_session,
+        wrapping_key_id: u16,
+        target_type: yh_object_type,
+        target_id: u16,
+        format: u8,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
     /**
      * Import a wrapped object
      *
@@ -1936,7 +2194,157 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
+    /**
+     * Export a (a)symmetric key material using an RSA wrap key, meta data or
+     *properties, like domains and capabilities, are not included. Only asymmetric
+     *and symmetric key objects are valid targets.
+     *
+     * @param session Authenticated session to use
+     * @param wrapping_key_id Object ID of the Wrap Key to use to wrap the object
+     * @param target_type Type of the target key object
+     * @param target_id Object ID of the target key object
+     * @param aes_algorithm Algorithm of the ephemeral AES key. Can be #YH_ALGO_AES128,
+     *#YH_ALGO_AES192 or #YH_ALGO_AES256
+     * @param hash_algorithm Hash algorithm. One of #YH_ALGO_RSA_OAEP_SHA1,
+     *#YH_ALGO_RSA_OAEP_SHA256, #YH_ALGO_RSA_OAEP_SHA384 or #YH_ALGO_RSA_OAEP_SHA512
+     * @param mgf1 MGF1_algorithm algorithm. One of #YH_ALGO_MGF1_SHA1, #YH_ALGO_MGF1_SHA256,
+     *#YH_ALGO_MGF1_SHA384 or #YH_ALGO_MGF1_SHA512
+     * @param oaep_label Label for the MGF1 algorithm
+     * @param oaep_label_len Label length for the MGF1 algorithm
+     * @param out Wrapped key object bytes
+     * @param out_len Length of the wrapped key
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_get_rsa_wrapped_key(
+        session: *const yh_session,
+        wrapping_key_id: u16,
+        target_type: yh_object_type,
+        target_id: u16,
+        aes_algorithm: yh_algorithm,
+        oaep_algorithm: yh_algorithm,
+        mgf1_algorithm: yh_algorithm,
+        oaep_label: *const u8,
+        oaep_label_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
+    /**
+     * Import an (a)symmetric key using an RSA wrap key.
+     *
+     * @param session Authenticated session to use
+     * @param wrapping_key_id Object ID of the Wrap Key to use to unwrap the object
+     * @param object_type Type of object to import. One of #YH_SYMMETRIC_KEY or
+     *#YH_ASYMMETRIC_KEY
+     * @param object__id Object ID of object to import
+     * @param object_algorithm Key algorithm of object to import
+     * @param object_label Label of object to import
+     * @param object_domains Domains of object to import
+     * @param object_capabilities of object to import
+     * @param aes_hash Hash algorithm. One of #YH_ALGO_RSA_OAEP_SHA1,
+     *#YH_ALGO_RSA_OAEP_SHA256, #YH_ALGO_RSA_OAEP_SHA384 or #YH_ALGO_RSA_OAEP_SHA512
+     * @param aes_mgf1 MGF1 algorithm. One of #YH_ALGO_MGF1_SHA1, #YH_ALGO_MGF1_SHA256,
+     *#YH_ALGO_MGF1_SHA384 or #YH_ALGO_MGF1_SHA512
+     * @param oaep_label Label for the MGF1 algorithm
+     * @param oaep_label_len Label length for the MGF1 algorithm
+     * @param in Wrapped object bytes
+     * @param in_len Length of the wrapped object
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_put_rsa_wrapped_key(
+        session: *const yh_session,
+        wrapping_key_id: u16,
+        object_type: yh_object_type,
+        object_id:  *mut u16,
+        object_algorithm: yh_algorithm,
+        object_label: *const c_char,
+        object_domains: u16,
+        object_capabilities: *const yh_capabilities,
+        oaep_algorithm: yh_algorithm,
+        mgf1_algorithm: yh_algorithm,
+        oaep_label: *const u8,
+        oaep_label_len: usize,
+        in_: *const u8,
+        in_len: usize,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
+    /**
+     * Export an object using an RSA wrap key. The wrapped object contain all meta
+     *data and properties, like domains and capabilities
+     *
+     * @param session Authenticated session to use
+     * @param wrapping_key_id Object ID of the Wrap Key to use to wrap the object
+     * @param target_type Type of the target object
+     * @param target_id Object ID of the target object
+     * @param aes_algorithm Algorithm of the ephemeral AES key. Can be #YH_ALGO_AES128,
+     *#YH_ALGO_AES192 or #YH_ALGO_AES256
+     * @param hash_algorithm Hash algorithm. One of #YH_ALGO_RSA_OAEP_SHA1,
+     *#YH_ALGO_RSA_OAEP_SHA256, #YH_ALGO_RSA_OAEP_SHA384 or #YH_ALGO_RSA_OAEP_SHA512
+     * @param mgf1_algorithm MGF1 algorithm. One of #YH_ALGO_MGF1_SHA1, #YH_ALGO_MGF1_SHA256,
+     *#YH_ALGO_MGF1_SHA384 or #YH_ALGO_MGF1_SHA512
+     * @param oaep_label Label for the MGF1 algorithm
+     * @param oaep_label_len Label length for the MGF1 algorithm
+     * @param out Wrapped object bytes
+     * @param out_len Length of the wrapped object
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_export_rsa_wrapped(
+        session: *const yh_session,
+        wrapping_key_id: u16,
+        target_type: yh_object_type,
+        target_id: u16,
+        aes_algorithm: yh_algorithm,
+        oaep_algorithm: yh_algorithm,
+        mgf1_algorithm: yh_algorithm,
+        oaep_label: *const u8,
+        oaep_label_len: usize,
+        out: *mut u8,
+        out_len: *mut usize,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
+    /**
+     * Import an object using an RSA wrap key
+     *
+     * @param session Authenticated session to use
+     * @param wrapping_key_id Object ID of the Wrap Key to use to unwrap the object
+     * @param hash_algorithm Hash algorithm. One of #YH_ALGO_RSA_OAEP_SHA1,
+     *#YH_ALGO_RSA_OAEP_SHA256, #YH_ALGO_RSA_OAEP_SHA384 or #YH_ALGO_RSA_OAEP_SHA512
+     * @param mgf1 MGF1 algorithm. One of #YH_ALGO_MGF1_SHA1, #YH_ALGO_MGF1_SHA256,
+     *#YH_ALGO_MGF1_SHA384 or #YH_ALGO_MGF1_SHA512
+     * @param label Label for the MGF1 algorithm
+     * @param oaep_label_len Label length for the MGF1 algorithm
+     * @param in Wrapped object bytes
+     * @param in_len Length of the wrapped object
+     * @param target_type Type of the target object
+     * @param target_id Object ID of the target object
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_import_rsa_wrapped(
+        session: *const yh_session,
+        wrapping_key_id: u16,
+        oaep_algorithm: yh_algorithm,
+        mgf1_algorithm: yh_algorithm,
+        oaep_label: *const u8,
+        oaep_label_len: usize,
+        in_: *const u8,
+        in_len: usize,
+        target_type: *mut yh_object_type,
+        target_id: *mut u16,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
     /**
      * Import a wrap key
      *
@@ -1965,7 +2373,36 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
+    /**
+     * Import a public RSA key as wrap key
+     *
+     * @param session session to use
+     * @param key_id Object ID
+     * @param label label
+     * @param domains domains
+     * @param capabilities capabilities
+     * @param algorithm algorithm
+     * @param delegated_capabilities delegated capabilities
+     * @param in key
+     * @param in_len key length
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_import_public_wrap_key(
+        session: *const yh_session,
+        key_id: *mut u16,
+        label: *const c_char,
+        domains: u16,
+        capabilities: *const yh_capabilities,
+        algorithm: yh_algorithm,
+        delegated_capabilities: *const yh_capabilities,
+        in_: *const u8,
+        in_len: usize,
+    ) -> yh_rc;
+}
+
+unsafe extern "C" {
     /**
      * Generate a wrap key
      *
@@ -1990,7 +2427,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get logs
      *
@@ -2011,7 +2448,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Set the log index
      *
@@ -2023,7 +2460,7 @@ extern "C" {
     pub fn yh_util_set_log_index(session: *const yh_session, index: u16) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get opaque object
      *
@@ -2042,7 +2479,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import opaque object
      *
@@ -2069,7 +2506,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign SSH certificate
      *
@@ -2096,7 +2533,31 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
+    /**
+     * Derive ECP256 keypair from password
+     *
+     * @param password password to derive kaypair from
+     * @param password_len length of password
+     * @param privkey derived private key
+     * @param privkey_len length of derived private key
+     * @param pubkey derived public key
+     * @param pubkey_len length of derived public key
+     *
+     * @return yh_rc error code
+     **/
+    pub fn yh_util_derive_ec_p256_key(
+        password: *const u8,
+        password_len: usize,
+        privkey: *const u8,
+        privkey_len: usize,
+        pubkey: *const u8,
+        pubkey_len: usize,
+    ) -> yh_rc;
+}
+
+
+unsafe extern "C" {
     /**
      * Import authentication key
      *
@@ -2126,7 +2587,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import authentication key with keys derived from password
      *
@@ -2155,7 +2616,7 @@ extern "C" {
 
 // TODO(adma): change_authentication_key{_derived)
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get template
      *
@@ -2174,7 +2635,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import template
      *
@@ -2201,7 +2662,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Create OTP AEAD
      *
@@ -2224,7 +2685,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Create OTP AEAD from random
      *
@@ -2243,7 +2704,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Decrypt OTP
      *
@@ -2272,7 +2733,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Import OTP AEAD Key
      *
@@ -2299,7 +2760,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Generate OTP AEAD Key
      *
@@ -2324,7 +2785,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Sign attestation certificate
      *
@@ -2345,7 +2806,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Set global option
      *
@@ -2364,7 +2825,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get global option
      *
@@ -2383,7 +2844,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get storage information
      *
@@ -2406,7 +2867,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Wrap data
      *
@@ -2429,7 +2890,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Unwrap data
      *
@@ -2452,7 +2913,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Blink the device
      *
@@ -2464,7 +2925,7 @@ extern "C" {
     pub fn yh_util_blink_device(session: *const yh_session, seconds: u8) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Reset the device
      *
@@ -2475,7 +2936,7 @@ extern "C" {
     pub fn yh_util_reset_device(session: *const yh_session) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get session ID
      *
@@ -2487,7 +2948,7 @@ extern "C" {
     pub fn yh_get_session_id(session: *const yh_session, sid: *mut u8) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if the connector has a device connected
      *
@@ -2498,7 +2959,7 @@ extern "C" {
     pub fn yh_connector_has_device(connector: *mut yh_connector) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get the connector version
      *
@@ -2517,7 +2978,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get connector address
      *
@@ -2532,7 +2993,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert capability string to byte array
      *
@@ -2547,7 +3008,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert capability byte array to strings
      *
@@ -2564,7 +3025,7 @@ extern "C" {
     ) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if capability is set
      *
@@ -2582,7 +3043,7 @@ extern "C" {
 // TODO(adma): merge_capabilities
 // TODO(adma): filter_capabilities
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if algorithm is an RSA algorithm
      *
@@ -2593,7 +3054,7 @@ extern "C" {
     pub fn yh_is_rsa(algorithm: yh_algorithm) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if algorithm is an EC algorithm
      *
@@ -2604,7 +3065,7 @@ extern "C" {
     pub fn yh_is_ec(algorithm: yh_algorithm) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if algorithm is an ED algorithm
      *
@@ -2615,7 +3076,7 @@ extern "C" {
     pub fn yh_is_ed(algorithm: yh_algorithm) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Check if algorithm is a HMAC algorithm
      *
@@ -2626,7 +3087,7 @@ extern "C" {
     pub fn yh_is_hmac(algorithm: yh_algorithm) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Get algorithm bitlength
      *
@@ -2638,7 +3099,7 @@ extern "C" {
     pub fn yh_get_key_bitlength(algorithm: yh_algorithm, result: *mut usize) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert algorithm to string
      *
@@ -2650,7 +3111,7 @@ extern "C" {
     pub fn yh_algo_to_string(algo: yh_algorithm, result: *mut *const c_char) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert string to algorithm
      *
@@ -2662,7 +3123,7 @@ extern "C" {
     pub fn yh_string_to_algo(string: *const c_char, algo: *mut yh_algorithm) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert type to string
      *
@@ -2674,7 +3135,7 @@ extern "C" {
     pub fn yh_type_to_string(type_: yh_object_type, result: *mut *const c_char) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert string to type
      *
@@ -2686,7 +3147,7 @@ extern "C" {
     pub fn yh_string_to_type(string: *const c_char, type_: *mut yh_object_type) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Convert string to option
      *
@@ -2698,7 +3159,7 @@ extern "C" {
     pub fn yh_string_to_option(string: *const c_char, option: *mut yh_option) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Verify an array of log entries
      *
@@ -2715,7 +3176,7 @@ extern "C" {
     ) -> bool;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Parse a string to a domains parameter
      *
@@ -2727,7 +3188,7 @@ extern "C" {
     pub fn yh_string_to_domains(domains: *const c_char, result: *mut u16) -> yh_rc;
 }
 
-extern "C" {
+unsafe extern "C" {
     /**
      * Write out domains to a string.
      *

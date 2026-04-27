@@ -38,17 +38,19 @@ extern crate log;
 extern crate regex;
 extern crate rustc_serialize;
 
-use lyh::{yh_connector, yh_rc, yh_session};
+extern crate serde;
 
-mod error;
+use std::fmt::Display;
+use lyh::{yh_algorithm, yh_connector, yh_rc, yh_session, YH_EC_P256_PRIVKEY_LEN, YH_EC_P256_PUBKEY_LEN};
+
+pub mod error;
 use error::Error;
 
 pub mod object;
 
 use object::{
     AsymmetricKey, ObjectAlgorithm, ObjectCapability, ObjectDescriptor, ObjectDomain, ObjectHandle,
-    OpaqueObject,
-};
+    OpaqueObject, ObjectType};
 
 pub mod otp;
 
@@ -80,7 +82,36 @@ pub struct DeviceInfo {
     /// Used log entries
     log_used: u8,
     /// Supported algorihms
-    algorithms: Vec<lyh::yh_algorithm>,
+    algorithms: Vec<yh_algorithm>,
+}
+
+impl Display for DeviceInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut info = String::new().to_owned();
+        info.push_str(format!("Version number:\t\t {}.{}.{}\n", self.major, self.minor, self.patch).as_str());
+        info.push_str(format!("Serial number:\t\t {}\n", self.serial).as_str());
+        info.push_str(format!("Log used:\t\t\t {}/{}\n", self.log_used, self.log_total).as_str());
+
+        let mut algo_str = String::new().to_owned();
+        self.algorithms.iter().for_each(|a| algo_str.push_str(format!("{},", ObjectAlgorithm::from(a)).as_str()));
+        info.push_str(format!("Supported algorithms:\t {}\t", algo_str).as_str());
+        write!(f, "{}", info)
+    }
+}
+
+impl DeviceInfo {
+    /// Firmware major version
+    pub fn major(&self) -> u8 {
+        self.major
+    }
+    /// Firmware minor version
+    pub fn minor(&self) -> u8 {
+        self.minor
+    }
+    /// Firmware patch version
+    pub fn patch(&self) -> u8 {
+        self.patch
+    }
 }
 
 /// Initialize libyubihsm
@@ -101,9 +132,9 @@ impl YubiHsm {
         let connector_ptr: *mut yh_connector = ::std::ptr::null_mut();
         let c_url = ::std::ffi::CString::new(url).unwrap();
 
-        try!(error::result_from_libyh(unsafe {
+        error::result_from_libyh(unsafe {
             lyh::yh_init_connector(c_url.as_ptr(), &connector_ptr)
-        }));
+        })?;
 
         error::result_from_libyh(unsafe { lyh::yh_connect(connector_ptr) }).and(Ok(YubiHsm {
             connector: connector_ptr,
@@ -119,7 +150,7 @@ impl YubiHsm {
     ) -> Result<Session, Error> {
         let session_ptr: *mut yh_session = ::std::ptr::null_mut();
 
-        try!(error::result_from_libyh(unsafe {
+        error::result_from_libyh(unsafe {
             lyh::yh_create_session_derived(
                 self.connector,
                 key_id,
@@ -131,7 +162,34 @@ impl YubiHsm {
         })
         .and(error::result_from_libyh(unsafe {
             lyh::yh_authenticate_session(session_ptr)
-        })));
+        }))?;
+
+        Ok(Session { ptr: session_ptr })
+    }
+
+    /// Open a session with the device authenticated with an asymmetrical authkey
+    pub fn establish_session_asym(
+        &self,
+        key_id: u16,
+        privkey: &[u8],
+        device_pubkey: &[u8],
+    ) -> Result<Session, Error> {
+        let session_ptr: *mut yh_session = ::std::ptr::null_mut();
+
+        error::result_from_libyh(unsafe {
+            lyh::yh_create_session_asym(
+                self.connector,
+                key_id,
+                privkey.as_ptr(),
+                privkey.len(),
+                device_pubkey.as_ptr(),
+                device_pubkey.len(),
+                &session_ptr,
+            )
+        })
+            .and(error::result_from_libyh(unsafe {
+                lyh::yh_authenticate_session(session_ptr)
+            }))?;
 
         Ok(Session { ptr: session_ptr })
     }
@@ -146,7 +204,7 @@ impl YubiHsm {
         let mut log_total = 0;
         let mut log_used = 0;
         let mut algorithms =
-            [lyh::yh_algorithm::YH_ALGO_RSA_PKCS1_SHA1; lyh::YH_MAX_ALGORITHM_COUNT];
+            [yh_algorithm::YH_ALGO_RSA_PKCS1_SHA1; lyh::YH_MAX_ALGORITHM_COUNT];
         let mut n_algorithms = lyh::YH_MAX_ALGORITHM_COUNT;
 
         unsafe {
@@ -163,7 +221,7 @@ impl YubiHsm {
             );
         }
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(DeviceInfo {
             major,
@@ -174,6 +232,28 @@ impl YubiHsm {
             log_used,
             algorithms: algorithms[0..n_algorithms].to_vec(),
         })
+    }
+
+    /// Obtain device public key
+    pub fn get_device_pubkey(&self) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+        let mut key_algorithm = yh_algorithm::YH_ALGO_ANY;
+
+        let res = unsafe {
+            lyh::yh_util_get_device_pubkey (
+                self.connector,
+                out.as_mut_ptr(),
+                &mut out_len,
+                &mut key_algorithm,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
     }
 
     /// Disconnect from the device
@@ -231,9 +311,13 @@ impl Session {
 
     /// List objects on the device
     pub fn list_objects(&self) -> Result<Vec<ObjectHandle>, Error> {
-        let capa = lyh::yh_capabilities {
-            capabilities: [0u8; 8],
-        };
+        let capabilities:Vec<ObjectCapability> = Vec::new();
+        self.list_objects_with_filter(0, ObjectType::Any, "", ObjectAlgorithm::ANY, &capabilities)
+    }
+
+    /// List filtered objects from the device
+    pub fn list_objects_with_filter(&self, obj_id:u16, obj_type:ObjectType, label:&str, algorithm:ObjectAlgorithm, object_capabilities: &[ObjectCapability]) -> Result<Vec<ObjectHandle>, Error> {
+        let c_str = ::std::ffi::CString::new(label).unwrap();
         let descriptor = lyh::yh_object_descriptor::default();
         let mut objects = vec![descriptor; 512].into_boxed_slice();
         let mut n_objects = 512;
@@ -241,18 +325,18 @@ impl Session {
         let res = unsafe {
             lyh::yh_util_list_objects(
                 self.ptr,
+                obj_id,
+                lyh::yh_object_type::from(obj_type),
                 0,
-                lyh::yh_object_type::YH_ANY,
-                0,
-                &capa,
-                lyh::yh_algorithm::YH_ALGO_ANY,
-                std::ptr::null(),
+                &ObjectCapability::primitive_from_slice(object_capabilities),
+                yh_algorithm::from(algorithm),
+                c_str.as_ptr(),
                 objects.as_mut_ptr(),
                 &mut n_objects,
             )
         };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(objects[0..n_objects]
             .iter()
@@ -264,7 +348,7 @@ impl Session {
     pub fn get_object_info(
         &self,
         id: u16,
-        object_type: object::ObjectType,
+        object_type: ObjectType,
     ) -> Result<ObjectDescriptor, Error> {
         let mut descriptor = lyh::yh_object_descriptor::default();
 
@@ -272,16 +356,16 @@ impl Session {
             lyh::yh_util_get_object_info(self.ptr, id, object_type.into(), &mut descriptor)
         };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(ObjectDescriptor::from(descriptor))
     }
 
     /// Delete an object
-    pub fn delete_object(&self, id: u16, object_type: object::ObjectType) -> Result<(), Error> {
+    pub fn delete_object(&self, id: u16, object_type: ObjectType) -> Result<(), Error> {
         let res = unsafe { lyh::yh_util_delete_object(self.ptr, id, object_type.into()) };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(())
     }
@@ -295,9 +379,9 @@ impl Session {
             lyh::yh_util_get_pseudo_random(self.ptr, count, bytes.as_mut_ptr(), &mut returned)
         };
 
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
-        if(returned != count) {
+        if returned != count {
             return Err(Error::WrongLength(count, returned));
         }
 
@@ -310,7 +394,7 @@ impl Session {
         id: u16,
         label: &str,
         domains: &[ObjectDomain],
-        object_capabilities: &[ObjectCapability],
+        capabilities: &[ObjectCapability],
         delegated_capabilities: &[ObjectCapability],
         password: &[u8],
     ) -> Result<u16, Error> {
@@ -324,13 +408,96 @@ impl Session {
                 &mut real_id,
                 c_str.as_ptr(),
                 ObjectDomain::primitive_from_slice(domains),
-                &ObjectCapability::primitive_from_slice(object_capabilities),
+                &ObjectCapability::primitive_from_slice(capabilities),
                 &ObjectCapability::primitive_from_slice(delegated_capabilities),
                 password.as_ptr(),
                 password.len(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
+    /// Import an ECP256 public key as authkey
+    pub fn import_authentication_publickey(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        delegated_capabilities: &[ObjectCapability],
+        pubkey: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_authentication_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                &ObjectCapability::primitive_from_slice(delegated_capabilities),
+                pubkey[1..].as_ptr(),
+                pubkey.len() - 1,
+                [].as_ptr(),
+                0
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
+    /// Derive ECP256 key from a password and return the public key portion
+    pub fn derive_ec_p256_key_from_password(&self, password: &[u8]) -> Result<Vec<u8>, Error> {
+
+        let privkey:[u8;YH_EC_P256_PRIVKEY_LEN] = [0;YH_EC_P256_PRIVKEY_LEN];
+        let pubkey:[u8;YH_EC_P256_PUBKEY_LEN] = [0;YH_EC_P256_PUBKEY_LEN];
+
+        let res = unsafe {
+            lyh::yh_util_derive_ec_p256_key(
+                password.as_ptr(),
+                password.len(),
+                privkey.as_ptr(),
+                privkey.len(),
+                pubkey.as_ptr(),
+                pubkey.len(),
+            )
+        };
+        error::result_from_libyh(res)?;
+        Ok(pubkey.to_vec())
+    }
+
+    /// Generate a wrapkey
+    pub fn generate_wrap_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        algorithm: ObjectAlgorithm,
+        delegated_capabilities: &[ObjectCapability],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_generate_wrap_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                algorithm.into(),
+                &ObjectCapability::primitive_from_slice(delegated_capabilities),
+            )
+        };
+        error::result_from_libyh(res)?;
 
         Ok(real_id)
     }
@@ -342,7 +509,7 @@ impl Session {
         id: u16,
         label: &str,
         domains: &[ObjectDomain],
-        object_capabilities: &[ObjectCapability],
+        capabilities: &[ObjectCapability],
         algorithm: ObjectAlgorithm,
         delegated_capabilities: &[ObjectCapability],
         wrapkey: &[u8],
@@ -357,14 +524,205 @@ impl Session {
                 &mut real_id,
                 c_str.as_ptr(),
                 ObjectDomain::primitive_from_slice(domains),
-                &ObjectCapability::primitive_from_slice(object_capabilities),
+                &ObjectCapability::primitive_from_slice(capabilities),
                 algorithm.into(),
                 &ObjectCapability::primitive_from_slice(delegated_capabilities),
                 wrapkey.as_ptr(),
                 wrapkey.len(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    /// Import an RSA public key as wrapkey
+    pub fn import_public_wrap_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        algorithm: ObjectAlgorithm,
+        delegated_capabilities: &[ObjectCapability],
+        wrapkey: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_public_wrap_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                algorithm.into(),
+                &ObjectCapability::primitive_from_slice(delegated_capabilities),
+                wrapkey.as_ptr(),
+                wrapkey.len(),
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
+
+    #[allow(clippy::too_many_arguments)]
+    /// Import a RSA key
+    pub fn import_rsa_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        algorithm: ObjectAlgorithm,
+        p: &[u8],
+        q: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_rsa_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                algorithm.into(),
+                p.as_ptr(),
+                q.as_ptr(),
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    /// Import a EC key
+    pub fn import_ec_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        algorithm: ObjectAlgorithm,
+        s: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_ec_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                algorithm.into(),
+                s.as_ptr(),
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    /// Import a ED key
+    pub fn import_ed_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        k: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_ed_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                yh_algorithm::YH_ALGO_EC_ED25519,
+                k.as_ptr(),
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    /// Import an AES key
+    pub fn import_aes_key(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        algorithm: ObjectAlgorithm,
+        k: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_aes_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                algorithm.into(),
+                k.as_ptr(),
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    /// Import an X509Certificate
+    pub fn import_cert(
+        &self,
+        id: u16,
+        label: &str,
+        domains: &[ObjectDomain],
+        capabilities: &[ObjectCapability],
+        cert: &[u8],
+    ) -> Result<u16, Error> {
+        let mut real_id = id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_import_opaque(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(&capabilities),
+                yh_algorithm::YH_ALGO_OPAQUE_X509_CERTIFICATE,
+                cert.as_ptr(),
+                cert.len(),
+            )
+        };
+        error::result_from_libyh(res)?;
 
         Ok(real_id)
     }
@@ -383,7 +741,7 @@ impl Session {
     pub fn export_wrapped(
         &self,
         wrapping_key_id: u16,
-        target_type: object::ObjectType,
+        target_type: ObjectType,
         target_id: u16,
     ) -> Result<Vec<u8>, Error> {
         let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
@@ -399,7 +757,37 @@ impl Session {
                 &mut out_len,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Export an object under wrap from the device with the option to include the ED25519 seed
+    pub fn export_wrapped_ex(
+        &self,
+        wrapping_key_id: u16,
+        target_type: ObjectType,
+        target_id: u16,
+        format: u8,
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_export_wrapped_ex(
+                self.ptr,
+                wrapping_key_id,
+                target_type.into(),
+                target_id,
+                if format > 0 { 1 } else { 0 },
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
 
         let mut out_vec = out.into_vec();
         out_vec.truncate(out_len);
@@ -426,7 +814,159 @@ impl Session {
                 &mut id,
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
+
+        Ok(ObjectHandle {
+            object_id: id,
+            object_type: (&object_type).into(),
+        })
+    }
+
+    /// Export a (a)symmetric key material using an RSA wrap key
+    pub fn export_rsa_wrapped_key(
+        &self,
+        wrapping_key_id: u16,
+        target_type: ObjectType,
+        target_id: u16,
+        aes_algorithm: ObjectAlgorithm,
+        oaep_algorithm: ObjectAlgorithm,
+        mfg1_algorithm: ObjectAlgorithm,
+        oaep_label: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_get_rsa_wrapped_key(
+                self.ptr,
+                wrapping_key_id,
+                target_type.into(),
+                target_id,
+                aes_algorithm.into(),
+                oaep_algorithm.into(),
+                mfg1_algorithm.into(),
+                oaep_label.as_ptr(),
+                oaep_label.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Import an (a)symmetric key using an RSA wrap key.
+    pub fn import_rsa_wrapped_key(
+        &self,
+        wrapping_key_id: u16,
+        object_type: ObjectType,
+        object_id: u16,
+        object_algorithm: ObjectAlgorithm,
+        object_label: &str,
+        object_domains: &[ObjectDomain],
+        object_capabilities: &[ObjectCapability],
+        oaep_algorithm: ObjectAlgorithm,
+        mgf1_algorithm: ObjectAlgorithm,
+        oaep_label: &[u8],
+        bytes: &[u8],
+    ) -> Result<ObjectHandle, Error> {
+        let c_str = ::std::ffi::CString::new(object_label).unwrap();
+        let mut id: u16 = object_id;
+
+        let res = unsafe {
+            lyh::yh_util_put_rsa_wrapped_key(
+                self.ptr,
+                wrapping_key_id,
+                object_type.into(),
+                &mut id,
+                object_algorithm.into(),
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(object_domains),
+                &ObjectCapability::primitive_from_slice(object_capabilities),
+                oaep_algorithm.into(),
+                mgf1_algorithm.into(),
+                oaep_label.as_ptr(),
+                oaep_label.len(),
+                bytes.as_ptr(),
+                bytes.len(),
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(ObjectHandle {
+            object_id: id,
+            object_type,
+        })
+    }
+
+    /// Export an object using an RSA wrap key
+    pub fn export_rsa_wrapped_object(
+        &self,
+        wrapping_key_id: u16,
+        target_type: ObjectType,
+        target_id: u16,
+        aes_algorithm: ObjectAlgorithm,
+        oaep_algorithm: ObjectAlgorithm,
+        mfg1_algorithm: ObjectAlgorithm,
+        oaep_label: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_export_rsa_wrapped(
+                self.ptr,
+                wrapping_key_id,
+                target_type.into(),
+                target_id,
+                aes_algorithm.into(),
+                oaep_algorithm.into(),
+                mfg1_algorithm.into(),
+                oaep_label.as_ptr(),
+                oaep_label.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Import an object using an RSA wrap key
+    pub fn import_rsa_wrapped_object(
+        &self,
+        wrapping_key_id: u16,
+        oaep_algorithm: ObjectAlgorithm,
+        mgf1_algorithm: ObjectAlgorithm,
+        oaep_label: &[u8],
+        bytes: &[u8],
+    ) -> Result<ObjectHandle, Error> {
+        let mut object_type: lyh::yh_object_type = lyh::yh_object_type::default();
+        let mut id: u16 = 0;
+
+        let res = unsafe {
+            lyh::yh_util_import_rsa_wrapped(
+                self.ptr,
+                wrapping_key_id,
+                oaep_algorithm.into(),
+                mgf1_algorithm.into(),
+                oaep_label.as_ptr(),
+                oaep_label.len(),
+                bytes.as_ptr(),
+                bytes.len(),
+                &mut object_type,
+                &mut id,
+            )
+        };
+        error::result_from_libyh(res)?;
 
         Ok(ObjectHandle {
             object_id: id,
@@ -460,7 +1000,7 @@ impl Session {
                 bytes.len(),
             )
         };
-        try!(error::result_from_libyh(res));
+        error::result_from_libyh(res)?;
 
         Ok(OpaqueObject::new(
             id,
@@ -479,9 +1019,21 @@ impl Session {
         domains: &[ObjectDomain],
         key_algorithm: ObjectAlgorithm,
     ) -> Result<AsymmetricKey, Error> {
+        let key_id: u16 = 0;
+        self.generate_asymmetric_key_with_keyid(key_id, label, capabilities, domains, key_algorithm)
+    }
+
+    /// Generate a new asymmetric key with set ID
+    pub fn generate_asymmetric_key_with_keyid(
+        &self,
+        mut key_id: u16,
+        label: &str,
+        capabilities: &[ObjectCapability],
+        domains: &[ObjectDomain],
+        key_algorithm: ObjectAlgorithm,
+    ) -> Result<AsymmetricKey, Error> {
         let c_str = ::std::ffi::CString::new(label).unwrap();
 
-        let mut key_id: u16 = 0;
         if unsafe { lyh::yh_is_rsa(key_algorithm.into()) } {
             let res = unsafe {
                 lyh::yh_util_generate_rsa_key(
@@ -493,7 +1045,7 @@ impl Session {
                     key_algorithm.into(),
                 )
             };
-            try!(::error::result_from_libyh(res));
+            error::result_from_libyh(res)?;
         } else if unsafe { lyh::yh_is_ec(key_algorithm.into()) } {
             let res = unsafe {
                 lyh::yh_util_generate_ec_key(
@@ -505,7 +1057,7 @@ impl Session {
                     key_algorithm.into(),
                 )
             };
-            try!(::error::result_from_libyh(res));
+            error::result_from_libyh(res)?;
         } else if unsafe { lyh::yh_is_ed(key_algorithm.into()) } {
             let res = unsafe {
                 lyh::yh_util_generate_ed_key(
@@ -517,7 +1069,7 @@ impl Session {
                     key_algorithm.into(),
                 )
             };
-            try!(error::result_from_libyh(res));
+            error::result_from_libyh(res)?;
         } else {
             return Err(Error::InvalidParameter("Key algorithm".to_string()));
         }
@@ -530,6 +1082,426 @@ impl Session {
             domains.to_vec(),
         ))
     }
+
+    /// Generate a new AES key
+    pub fn generate_aes_key (
+        &self,
+        key_id: u16,
+        label: &str,
+        capabilities: &[ObjectCapability],
+        domains: &[ObjectDomain],
+        key_algorithm: ObjectAlgorithm,
+    ) -> Result<u16, Error> {
+
+
+        let mut real_id = key_id;
+
+        let c_str = ::std::ffi::CString::new(label).unwrap();
+
+        let res = unsafe {
+            lyh::yh_util_generate_aes_key(
+                self.ptr,
+                &mut real_id,
+                c_str.as_ptr(),
+                ObjectDomain::primitive_from_slice(domains),
+                &ObjectCapability::primitive_from_slice(capabilities),
+                key_algorithm.into())
+        };
+        error::result_from_libyh(res)?;
+
+        Ok(real_id)
+    }
+
+    /// Get the public key
+    pub fn get_pubkey(
+        &self,
+        key_id: u16,
+        key_type: ObjectType,
+    ) -> Result<(Vec<u8>, ObjectAlgorithm), Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+        let mut key_algorithm = yh_algorithm::YH_ALGO_ANY;
+
+        let res = unsafe {
+            lyh::yh_util_get_public_key_ex(
+                self.ptr,
+                key_type.into(),
+                key_id,
+                out.as_mut_ptr(),
+                &mut out_len,
+                &mut key_algorithm,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok((out_vec, key_algorithm.into()))
+    }
+
+    /// Get the opaque object value
+    pub fn get_opaque(
+        &self,
+        key_id: u16,
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_get_opaque(
+                self.ptr,
+                key_id,
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Sign data using RSA-PKCS#1v1.5
+    pub fn sign_pkcs1v1_5(
+        &self,
+        key_id: u16,
+        hashed: bool,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_sign_pkcs1v1_5(
+                self.ptr,
+                key_id,
+                hashed,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Sign data using RSA-PSS
+    pub fn sign_pss(
+        &self,
+        key_id: u16,
+        salt_len: usize,
+        mgf1algo: ObjectAlgorithm,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_sign_pss(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+                salt_len,
+                mgf1algo.into(),
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Sign data using ECDSA
+    pub fn sign_ecdsa(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_sign_ecdsa(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Sign data using EDDSA
+    pub fn sign_eddsa(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_sign_eddsa(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Sign attestation certificate
+    pub fn sign_attestation_certificate(
+        &self,
+        keyid_attested: u16,
+        keyid_attesting: u16,
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_sign_attestation_certificate(
+                self.ptr,
+                keyid_attested,
+                keyid_attesting,
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Encrypt data using AES ECB
+    pub fn encrypt_aes_ecb(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_encrypt_aes_ecb(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Encrypt data using AES CBC
+    pub fn encrypt_aes_cbc(
+        &self,
+        key_id: u16,
+        iv: &[u8],
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_encrypt_aes_cbc(
+                self.ptr,
+                key_id,
+                iv.as_ptr(),
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Decrypt data using AES ECB
+    pub fn decrypt_aes_ecb(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_decrypt_aes_ecb(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Decrypt data using AES CBC
+    pub fn decrypt_aes_cbc(
+        &self,
+        key_id: u16,
+        iv: &[u8],
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_decrypt_aes_cbc(
+                self.ptr,
+                key_id,
+                iv.as_ptr(),
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Decrypt data using RSA-PKCS#1v1.5
+    pub fn decrypt_pkcs1v1_5(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_decrypt_pkcs1v1_5(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Decrypt data using RSA-OAEP
+    pub fn decrypt_oaep(
+        &self,
+        key_id: u16,
+        data: &[u8],
+        label: &[u8],
+        mgf1algo: ObjectAlgorithm,
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_decrypt_oaep(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+                label.as_ptr(),
+                label.len(),
+                mgf1algo.into(),
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
+    /// Derive ECDH
+    pub fn derive_ecdh(
+        &self,
+        key_id: u16,
+        data: &[u8],
+    ) -> Result<Vec<u8>, Error> {
+        let mut out = vec![0; lyh::YH_MSG_BUF_SIZE as usize].into_boxed_slice();
+        let mut out_len = out.len();
+
+        let res = unsafe {
+            lyh::yh_util_derive_ecdh(
+                self.ptr,
+                key_id,
+                data.as_ptr(),
+                data.len(),
+                out.as_mut_ptr(),
+                &mut out_len,
+            )
+        };
+        error::result_from_libyh(res)?;
+
+        let mut out_vec = out.into_vec();
+        out_vec.truncate(out_len);
+
+        Ok(out_vec)
+    }
+
 }
 
 impl Drop for Session {
@@ -549,16 +1521,39 @@ mod test {
     use std::thread;
     use std::time::Duration;
 
-    extern crate base64;
-
     const ENV_VAR: &str = "YUBIHSM_CONNECTOR_URL";
     const CONNECTOR_URL: &str = "http://127.0.0.1:12345";
     const PASSWORD: &str = "password";
-    const WRAPKEY: [u8; 32] = [
+    const AESKEY: [u8; 32] = [
         0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e,
         0x4f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d,
         0x4e, 0x4f,
     ];
+    const RSA2048_PRIVKEY: [u8; 256] = [
+        0xdc, 0x5d, 0xc3, 0x1f, 0xb9, 0x9f, 0x1d, 0x71, 0x55, 0x44, 0xea, 0xd4, 0xf5, 0xd3, 0xeb, 0x6e, 0xda,
+        0xb7, 0x45, 0x33, 0xad, 0x1f, 0x05, 0xd8, 0x35, 0x37, 0xef, 0x17, 0xd5, 0x6d, 0x6f, 0x47, 0xcb, 0x96,
+        0x91, 0x5f, 0xd6, 0xcd, 0xbb, 0x4d, 0xda, 0x8d, 0x9e, 0x85, 0x3c, 0xd5, 0xbe, 0xdc, 0x73, 0x4b, 0x8e,
+        0x33, 0x8d, 0xb4, 0xab, 0x9f, 0xcb, 0x16, 0x92, 0x06, 0xc8, 0xb3, 0xf2, 0x4f, 0x59, 0x6f, 0xf5, 0xc8,
+        0x8d, 0x0a, 0x8d, 0x23, 0x98, 0xfe, 0x7f, 0xc2, 0x81, 0x62, 0xbd, 0x7d, 0x12, 0x2a, 0x29, 0x11, 0x38,
+        0xd4, 0x0f, 0x7b, 0xb8, 0x45, 0xf2, 0x51, 0x4d, 0x76, 0xa7, 0xc7, 0x5a, 0xae, 0xe0, 0xfe, 0x83, 0x36,
+        0x5e, 0x42, 0xc1, 0x23, 0xc4, 0xf4, 0x05, 0x94, 0x9b, 0x2d, 0xdc, 0x46, 0x7d, 0x2d, 0xa8, 0x62, 0xd0,
+        0x51, 0x85, 0x88, 0xa3, 0xbf, 0x10, 0x24, 0x36, 0x4b, 0xb5, 0x8e, 0x74, 0xcc, 0x7e, 0x4c, 0xdc, 0x39,
+        0x0c, 0x46, 0xdf, 0xac, 0xaf, 0x8b, 0x76, 0xe1, 0xde, 0x6c, 0xf4, 0xd3, 0x75, 0x25, 0xd5, 0xa6, 0xe7,
+        0xe8, 0x89, 0x06, 0x92, 0x1d, 0xea, 0xd5, 0x92, 0x62, 0xca, 0x3e, 0x47, 0x33, 0x6d, 0x85, 0x3a, 0xb0,
+        0xc2, 0x47, 0xbe, 0x58, 0xac, 0xda, 0xd8, 0xfc, 0xed, 0xa9, 0xed, 0x3b, 0xfd, 0xa7, 0x05, 0xea, 0x20,
+        0x2f, 0xcb, 0x54, 0x5b, 0x4e, 0xd3, 0x05, 0x94, 0x35, 0x93, 0x7c, 0xf9, 0x83, 0x8a, 0x54, 0x19, 0x27,
+        0xf0, 0x87, 0x54, 0x2e, 0x15, 0xbe, 0xe0, 0x19, 0xac, 0xf3, 0xe6, 0xd7, 0xc5, 0x0a, 0xfa, 0xee, 0xc2,
+        0x16, 0xf5, 0x47, 0x1f, 0xed, 0xde, 0xcd, 0xe2, 0xf4, 0x62, 0x99, 0xa0, 0x73, 0x77, 0x36, 0xf5, 0x5d,
+        0xe1, 0x01, 0xcc, 0x64, 0x8f, 0xc5, 0xd6, 0x10, 0xc0, 0x9f, 0x9c, 0x88, 0x89, 0xc4, 0xd4, 0x20, 0xb9,
+        0xcb,
+    ];
+    const ECP256_PUBKEY: [u8; 65] = [
+        0x04, 0x9d, 0x60, 0xd3, 0x2a, 0x2b, 0x90, 0xbe, 0x57, 0xdf, 0x56, 0x19, 0xe6, 0xba, 0x28, 0x3e, 0x73,
+        0x29, 0xa1, 0xab, 0x1c, 0xe2, 0xf2, 0xed, 0x17, 0xc1, 0x44, 0x46, 0xf1, 0xc2, 0xe6, 0x0b, 0x39, 0x2e,
+        0x96, 0x8c, 0x10, 0xea, 0xb9, 0x41, 0xbc, 0x7c, 0x38, 0x27, 0x90, 0x62, 0x6b, 0xf2, 0x6d, 0x28, 0x31,
+        0x56, 0x25, 0xf1, 0xfb, 0x30, 0xef, 0x52, 0x31, 0x88, 0x61, 0x18, 0x40, 0xa6, 0xcf,
+    ];
+
     const CERT: &str = "MIIC+jCCAeKgAwIBAgIGAWbt9mc3MA0GCSqGSIb3DQEBBQUAMD4xPDA6BgNVBAMM\
                         M0R1bW15IGNlcnRpZmljYXRlIGNyZWF0ZWQgYnkgYSBDRVNlQ29yZSBhcHBsaWNh\
                         dGlvbjAeFw0xODExMDcxMTM3MjBaFw00ODEwMzExMTM3MjBaMD4xPDA6BgNVBAMM\
@@ -595,6 +1590,16 @@ mod test {
         let hsm = create_hsm!();
 
         println!("{:?}", hsm.get_device_info().unwrap());
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn device_pubkey() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        println!("{:?}", hsm.get_device_pubkey().unwrap());
 
         super::exit().unwrap();
     }
@@ -664,10 +1669,10 @@ mod test {
         res = session.get_object_info(99, ObjectType::Template);
 
         match res {
-            Err(super::Error::LibYubiHsm(super::lyh::Error::DeviceObjectNotFound)) => (),
+            Err(super::Error::LibYubiHsm(lyh::Error::DeviceObjectNotFound)) => (),
             Err(e) => panic!(
                 "Wrong error. Expected {}, found {}",
-                super::Error::LibYubiHsm(super::lyh::Error::DeviceObjectNotFound),
+                super::Error::LibYubiHsm(lyh::Error::DeviceObjectNotFound),
                 e
             ),
             _ => unreachable!(),
@@ -787,6 +1792,68 @@ mod test {
     }
 
     #[test]
+    fn generate_wrap_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let id = session
+            .generate_wrap_key(
+                0,
+                "Test wrapkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::ImportWrapped],
+                ObjectAlgorithm::Aes256CcmWrap,
+                &[],
+            )
+            .unwrap();
+
+        let info = session.get_object_info(id, ObjectType::WrapKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session.delete_object(id, ObjectType::WrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn generate_rsa_wrap_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let id = session
+            .generate_wrap_key(
+                0,
+                "Test wrapkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::ImportWrapped],
+                ObjectAlgorithm::Rsa3072,
+                &[],
+            )
+            .unwrap();
+
+        let info = session.get_object_info(id, ObjectType::WrapKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session.delete_object(id, ObjectType::WrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
     fn import_wrap_key() {
         super::init().unwrap();
         let hsm = create_hsm!();
@@ -801,7 +1868,7 @@ mod test {
                 &[ObjectCapability::ImportWrapped],
                 ObjectAlgorithm::Aes256CcmWrap,
                 &[],
-                &WRAPKEY,
+                &AESKEY,
             )
             .unwrap();
 
@@ -812,6 +1879,60 @@ mod test {
         println!("{:#?} ", info.unwrap());
 
         session.delete_object(id, ObjectType::WrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn import_rsa_wrap_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let id = session
+            .import_wrap_key(
+                0,
+                "Test wrapkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::ImportWrapped],
+                ObjectAlgorithm::Rsa2048,
+                &[],
+                &RSA2048_PRIVKEY,
+            )
+            .unwrap();
+
+        let info = session.get_object_info(id, ObjectType::WrapKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        let (pubkey, algo) = session.get_pubkey(id, ObjectType::WrapKey).unwrap();
+
+        let pub_id = session
+            .import_public_wrap_key(
+                id,
+                "Test public wrapkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::ExportWrapped],
+                algo,
+                &[],
+                &pubkey,
+            )
+            .unwrap();
+
+        let info = session.get_object_info(pub_id, ObjectType::PublicWrapKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+
+        session.delete_object(id, ObjectType::WrapKey).unwrap();
+        session.delete_object(pub_id, ObjectType::PublicWrapKey).unwrap();
 
         session.close().unwrap();
 
@@ -839,7 +1960,7 @@ mod test {
                     ObjectCapability::ExportWrapped,
                     ObjectCapability::ExportableUnderWrap,
                 ],
-                &WRAPKEY,
+                &AESKEY,
             )
             .unwrap();
 
@@ -879,7 +2000,7 @@ mod test {
                     ObjectCapability::DeleteAuthenticationKey,
                     ObjectCapability::DeleteWrapKey,
                 ],
-                &WRAPKEY,
+                &AESKEY,
             )
             .unwrap();
 
@@ -919,6 +2040,360 @@ mod test {
             .unwrap();
 
         session.delete_object(wrap_id, ObjectType::WrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn import_rsa_wrapped_object() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let auth_id = session
+            .import_authentication_key(
+                0,
+                "Test authkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &vec![
+                    ObjectCapability::DeleteAuthenticationKey,
+                    ObjectCapability::DeleteWrapKey,
+                    ObjectCapability::DeletePublicWrapKey,
+                    ObjectCapability::ExportableUnderWrap,
+                ],
+                &vec![],
+                "PASSWORD".as_bytes(),
+            )
+            .unwrap();
+
+        let wrap_id = session
+            .import_wrap_key(
+                0,
+                "Test RSA wrap object",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[
+                    ObjectCapability::ImportWrapped,
+                ],
+                ObjectAlgorithm::Rsa2048,
+                &[
+                    ObjectCapability::ExportWrapped,
+                    ObjectCapability::ExportableUnderWrap,
+                    ObjectCapability::DeleteAuthenticationKey,
+                    ObjectCapability::DeletePublicWrapKey,
+                    ObjectCapability::DeleteWrapKey,
+                ],
+                &RSA2048_PRIVKEY,
+            ).unwrap();
+
+        let (pubkey, algo) = session.get_pubkey(wrap_id, ObjectType::WrapKey).unwrap();
+
+        let pub_wrap_id = session
+            .import_public_wrap_key(
+                wrap_id,
+                "Test RSA wrap object",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[
+                    ObjectCapability::ExportWrapped,
+                ],
+                algo,
+                &[
+                    ObjectCapability::ExportWrapped,
+                    ObjectCapability::ExportableUnderWrap,
+                    ObjectCapability::DeleteAuthenticationKey,
+                    ObjectCapability::DeletePublicWrapKey,
+                    ObjectCapability::DeleteWrapKey,
+                ],
+                &pubkey,
+            ).unwrap();
+
+        let oaep_label = session.get_random(32).unwrap();
+
+        let wrapped = session.export_rsa_wrapped_object(
+            pub_wrap_id,
+            ObjectType::AuthenticationKey,
+            auth_id,
+            ObjectAlgorithm::Aes256,
+            ObjectAlgorithm::RsaOaepSha256,
+            ObjectAlgorithm::Mgf1Sha256,
+            &oaep_label,
+        ).unwrap();
+
+        println!("{:?} ", wrapped);
+
+        session
+            .delete_object(auth_id, ObjectType::AuthenticationKey)
+            .unwrap();
+
+        session.import_rsa_wrapped_object(
+            wrap_id,
+            ObjectAlgorithm::RsaOaepSha256,
+            ObjectAlgorithm::Mgf1Sha256,
+            &oaep_label,
+            &wrapped
+        ).unwrap();
+
+        session.close().unwrap();
+
+        let session = hsm.establish_session(auth_id, "PASSWORD", true).unwrap();
+
+        session
+            .delete_object(auth_id, ObjectType::AuthenticationKey)
+            .unwrap();
+
+        session.delete_object(wrap_id, ObjectType::WrapKey).unwrap();
+        session.delete_object(pub_wrap_id, ObjectType::PublicWrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn import_rsa_wrapped_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let sym_id = session
+            .import_aes_key(
+                0,
+                "Test symkey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &vec![
+                    ObjectCapability::EncryptEcb,
+                    ObjectCapability::DecryptEcb,
+                    ObjectCapability::ExportableUnderWrap,
+                ],
+                ObjectAlgorithm::Aes256,
+                &AESKEY,
+            )
+            .unwrap();
+
+        let data = session.get_random(16).unwrap();
+        let encrypted = session.encrypt_aes_ecb(sym_id, &data).unwrap();
+
+        let wrap_id = session
+            .import_wrap_key(
+                0,
+                "Test RSA wrap key",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[
+                    ObjectCapability::ImportWrapped,
+                ],
+                ObjectAlgorithm::Rsa2048,
+                &[
+                    ObjectCapability::ExportableUnderWrap,
+                    ObjectCapability::EncryptEcb,
+                    ObjectCapability::DecryptEcb,
+                ],
+                &RSA2048_PRIVKEY,
+            ).unwrap();
+
+        let (pubkey, algo) = session.get_pubkey(wrap_id, ObjectType::WrapKey).unwrap();
+
+        let pub_wrap_id = session
+            .import_public_wrap_key(
+                wrap_id,
+                "Test RSA wrap key",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[
+                    ObjectCapability::ExportWrapped,
+                ],
+                algo,
+                &[
+                    ObjectCapability::ExportableUnderWrap,
+                    ObjectCapability::EncryptEcb,
+                    ObjectCapability::DecryptEcb,
+                ],
+                &pubkey,
+            ).unwrap();
+
+        // let oaep_label: &[u8] = &[];
+        let oaep_label = session.get_random(32).unwrap();
+
+        let wrapped = session.export_rsa_wrapped_key(
+            pub_wrap_id,
+            ObjectType::SymmetricKey,
+            sym_id,
+            ObjectAlgorithm::Aes256,
+            ObjectAlgorithm::RsaOaepSha256,
+            ObjectAlgorithm::Mgf1Sha256,
+            &oaep_label,
+        ).unwrap();
+
+        println!("{:?} ", wrapped);
+
+        session
+            .delete_object(sym_id, ObjectType::SymmetricKey)
+            .unwrap();
+
+        let imported_handle = session.import_rsa_wrapped_key(
+            wrap_id,
+            ObjectType::SymmetricKey,
+            0,
+            ObjectAlgorithm::Aes256,
+            "Test RSA wrapped key",
+            &ObjectDomain::vec_from_str("all").unwrap(),
+            &[ObjectCapability::EncryptEcb, ObjectCapability::DecryptEcb, ObjectCapability::ExportableUnderWrap],
+            ObjectAlgorithm::RsaOaepSha256,
+            ObjectAlgorithm::Mgf1Sha256,
+            &oaep_label,
+            &wrapped).unwrap();
+
+        session.close().unwrap();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let decrypted = session.decrypt_aes_ecb(imported_handle.object_id, &encrypted).unwrap();
+        assert_eq!(data, decrypted);
+
+        session.delete_object(imported_handle.object_id, imported_handle.object_type).unwrap();
+
+        session.delete_object(wrap_id, ObjectType::WrapKey).unwrap();
+        session.delete_object(pub_wrap_id, ObjectType::PublicWrapKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+
+    #[test]
+    fn generate_symmetric_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let capabilities = vec![
+            ObjectCapability::EncryptCbc,
+            ObjectCapability::DecryptCbc,
+            ObjectCapability::ExportableUnderWrap,
+        ];
+
+        let key_id = session
+            .generate_aes_key(
+                0,
+                "Test symmetric key generation",
+                &capabilities,
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                ObjectAlgorithm::Aes192,
+            )
+            .unwrap();
+
+        session.close().unwrap();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let info = session.get_object_info(key_id, ObjectType::SymmetricKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session
+            .delete_object(key_id, ObjectType::SymmetricKey)
+            .unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn import_symmetric_key() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let id = session
+            .import_aes_key(
+                0,
+                "Test aeskey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::EncryptEcb, ObjectCapability::DecryptEcb],
+                ObjectAlgorithm::Aes256,
+                &AESKEY,
+            )
+            .unwrap();
+
+        let info = session.get_object_info(id, ObjectType::SymmetricKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session.delete_object(id, ObjectType::SymmetricKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+
+    #[test]
+    fn encrypt_ecb() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let key_id = session
+            .generate_aes_key(
+                0,
+                "aeskey",
+                &[ObjectCapability::EncryptEcb, ObjectCapability::DecryptEcb],
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                ObjectAlgorithm::Aes128,
+            )
+            .unwrap();
+
+        let data = session.get_random(16).unwrap();
+
+        let encrypted = session.encrypt_aes_ecb(key_id, &data).unwrap();
+        assert_ne!(data, encrypted);
+        let decrypted = session.decrypt_aes_ecb(key_id, &encrypted).unwrap();
+        assert_eq!(data, decrypted);
+
+        session.delete_object(key_id, ObjectType::SymmetricKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn encrypt_cbc() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let key_id = session
+            .import_aes_key(
+                0,
+                "aeskey",
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                &[ObjectCapability::EncryptCbc, ObjectCapability::DecryptCbc],
+                ObjectAlgorithm::Aes256,
+                &AESKEY,
+            )
+            .unwrap();
+
+        let data = session.get_random(32).unwrap();
+        let iv = session.get_random(16).unwrap();
+
+        let encrypted = session.encrypt_aes_cbc(key_id, &iv, &data).unwrap();
+        assert_ne!(data, encrypted);
+        let decrypted = session.decrypt_aes_cbc(key_id, &iv, &encrypted).unwrap();
+        assert_eq!(data, decrypted);
+
+        session.delete_object(key_id, ObjectType::SymmetricKey).unwrap();
 
         session.close().unwrap();
 
@@ -1006,6 +2481,74 @@ mod test {
     }
 
     #[test]
+    fn generate_asymmetric_key_with_keyid() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let capabilities = vec![
+            ObjectCapability::SignPkcs,
+            ObjectCapability::SignPss,
+            ObjectCapability::SignAttestationCertificate,
+        ];
+
+        let key = session
+            .generate_asymmetric_key_with_keyid(
+                0,
+                "Test key generation",
+                &capabilities,
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                ObjectAlgorithm::Rsa2048,
+            )
+            .unwrap();
+
+        session.close().unwrap();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let info = session.get_object_info(key.get_key_id(), ObjectType::AsymmetricKey);
+
+        assert!(info.is_ok());
+
+        println!("{:#?} ", info.unwrap());
+
+        session
+            .delete_object(key.get_key_id(), ObjectType::AsymmetricKey)
+            .unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
+    fn derive_ecdh() {
+        super::init().unwrap();
+        let hsm = create_hsm!();
+
+        let session = hsm.establish_session(1, PASSWORD, true).unwrap();
+
+        let key = session
+            .generate_asymmetric_key(
+                "Test ecdh",
+                &[ObjectCapability::DeriveEcdh],
+                &ObjectDomain::vec_from_str("all").unwrap(),
+                ObjectAlgorithm::EcP256,
+            )
+            .unwrap();
+
+        let ecdh = session.derive_ecdh(key.get_key_id(), &ECP256_PUBKEY).unwrap();
+        println!("{:#?} ", ecdh);
+
+        session.delete_object(key.get_key_id(), ObjectType::AsymmetricKey).unwrap();
+
+        session.close().unwrap();
+
+        super::exit().unwrap();
+    }
+
+    #[test]
     fn string_conversions() {
         let types = vec![
             (ObjectType::AsymmetricKey, "asymmetric-key"),
@@ -1015,6 +2558,7 @@ mod test {
             (ObjectType::OtpAeadKey, "otp-aead-key"),
             (ObjectType::Template, "template"),
             (ObjectType::WrapKey, "wrap-key"),
+            (ObjectType::PublicWrapKey, "public-wrap-key"),
         ];
 
         for t in types {
