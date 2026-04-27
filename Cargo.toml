@@ -16,7 +16,7 @@
 
 [package]
 name = "yubihsmrs"
-version = "2.1.4"
+version = "3.0.0"
 authors = ["Alessio Di Mauro <alessio@yubico.com>", "Aveen Ismail <aveen.ismail@yubico.com>"]
 description = "Rust wrapper library for libyubihsm"
 keywords = ["yubico", "hsm", "ffi"]
@@ -43,4 +43,4 @@ base64 = "0.21.2"
 
 [dependencies.libyubihsm-sys]
 path = "libyubihsm-sys"
-version = "2.0.0"
+version = "3.0.0"
