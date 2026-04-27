@@ -50,7 +50,6 @@ mod build {
 mod build {
     extern crate pkg_config;
     use std::env;
-    // use std::path::Path;
 
     pub fn main() {
 

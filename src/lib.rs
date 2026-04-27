@@ -41,14 +41,16 @@ extern crate rustc_serialize;
 extern crate serde;
 
 use std::fmt::Display;
-use lyh::{yh_algorithm, yh_connector, YH_EC_P256_PRIVKEY_LEN, YH_EC_P256_PUBKEY_LEN, yh_rc, yh_session};
+use lyh::{yh_algorithm, yh_connector, yh_rc, yh_session, YH_EC_P256_PRIVKEY_LEN, YH_EC_P256_PUBKEY_LEN};
 
 pub mod error;
 use error::Error;
 
 pub mod object;
 
-use object::{AsymmetricKey, ObjectAlgorithm, ObjectCapability, ObjectDescriptor, ObjectDomain, ObjectHandle, ObjectType, OpaqueObject};
+use object::{
+    AsymmetricKey, ObjectAlgorithm, ObjectCapability, ObjectDescriptor, ObjectDomain, ObjectHandle,
+    OpaqueObject, ObjectType};
 
 pub mod otp;
 
@@ -313,12 +315,9 @@ impl Session {
         self.list_objects_with_filter(0, ObjectType::Any, "", ObjectAlgorithm::ANY, &capabilities)
     }
 
-    /// List objects on the device
+    /// List filtered objects from the device
     pub fn list_objects_with_filter(&self, obj_id:u16, obj_type:ObjectType, label:&str, algorithm:ObjectAlgorithm, object_capabilities: &[ObjectCapability]) -> Result<Vec<ObjectHandle>, Error> {
         let c_str = ::std::ffi::CString::new(label).unwrap();
-        /*let capa = yh_capabilities {
-            capabilities: [0u8; 8],
-        };*/
         let descriptor = lyh::yh_object_descriptor::default();
         let mut objects = vec![descriptor; 512].into_boxed_slice();
         let mut n_objects = 512;
@@ -502,7 +501,6 @@ impl Session {
 
         Ok(real_id)
     }
-
 
     #[allow(clippy::too_many_arguments)]
     /// Import a wrapkey
