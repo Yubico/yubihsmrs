@@ -161,10 +161,16 @@ fn bindgen_test_layout_yh_capabilities() {
     );
 }
 
+/// Raw Command byte definitions
+pub type yh_cmd = c_uint;
+
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::FromPrimitive)]
 /// Command byte definitions
-pub enum yh_cmd {
+pub enum yh_cmd_enum {
+    #[num_enum(default)]
+    /// Unknown or unrecognized command value
+    YHC_UNKNOWN = u32::MAX,
     /// Echo, request
     YHC_ECHO = 0x01,
     /// Echo, response
@@ -373,10 +379,14 @@ pub enum yh_cmd {
     YHC_ERROR = 0x7f,
 }
 
+/// Raw Object types
+pub type yh_object_type = c_uint;
+
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::FromPrimitive)]
 /// Object types
-pub enum yh_object_type {
+pub enum yh_object_type_enum {
+    #[num_enum(default)]
     /// Any object type (convenience value, not in libyubihsm)
     YH_ANY = 0x00,
     /// Opaque object
@@ -401,16 +411,14 @@ pub enum yh_object_type {
     YH_PUBLIC_KEY = 0x83,
 }
 
-impl Default for yh_object_type {
-    fn default() -> yh_object_type {
-        yh_object_type::YH_ANY
-    }
-}
+/// Raw Algorithms
+pub type yh_algorithm = c_uint;
 
 #[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::FromPrimitive)]
 /// Algorithms
-pub enum yh_algorithm {
+pub enum yh_algorithm_enum {
+    #[num_enum(default)]
     /// Any algorithm (convenience value, not in libyubihsm)
     YH_ALGO_ANY = 0,
     /// RSA PKCS1v1.5 with SHA1
@@ -525,26 +533,32 @@ pub enum yh_algorithm {
     YH_ALGO_AES_KWP = 55,
 }
 
-impl Default for yh_algorithm {
-    fn default() -> yh_algorithm {
-        yh_algorithm::YH_ALGO_ANY
-    }
-}
+/// Raw Device-global options
+pub type yh_option = c_uint;
 
 #[repr(u32)]
 /// Device-global options
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum yh_option {
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::FromPrimitive)]
+pub enum yh_option_enum {
+    #[num_enum(default)]
+    /// No option (convenience value, not in libyubihsm)
+    YH_OPTION_NONE = 0,
     /// Forced audit mode
     YH_OPTION_FORCE_AUDIT = 1,
     /// Audit logging per command
     YH_OPTION_COMMAND_AUDIT = 3,
 }
 
+/// Raw Connector options
+pub type yh_connector_option = c_uint;
+
 #[repr(u32)]
 /// Connector options
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum yh_connector_option {
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::FromPrimitive)]
+pub enum yh_connector_option_enum {
+    #[num_enum(default)]
+    /// No connection (convenience value, not in libyubihsm)
+    YH_CONNECTOR_NONE = 0,
     /// File with CA certificate to validate the connector with (const char *) not
     /// implemented on Windows
     YH_CONNECTOR_HTTPS_CA = 1,
