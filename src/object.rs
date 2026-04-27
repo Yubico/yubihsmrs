@@ -58,6 +58,8 @@ pub enum ObjectType {
     PublicKey,
     /// Any type
     Any,
+    /// Unknown type
+    Unknown,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, std::hash::Hash, Serialize, Deserialize)]
@@ -330,6 +332,8 @@ pub enum ObjectAlgorithm {
     AesKwp,
     /// Any algorithms
     ANY,
+    /// Unknown algorithm
+    Unknown,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -811,6 +815,7 @@ impl From<ObjectType> for yh_object_type {
 impl From<yh_object_type_enum> for ObjectType {
     fn from(object_type: yh_object_type_enum) -> Self {
         match object_type {
+            yh_object_type_enum::YH_UNKNOWN => ObjectType::Unknown,
             yh_object_type_enum::YH_ANY => ObjectType::Any,
             yh_object_type_enum::YH_OPAQUE => ObjectType::Opaque,
             yh_object_type_enum::YH_AUTHENTICATION_KEY => ObjectType::AuthenticationKey,
@@ -841,6 +846,7 @@ impl From<ObjectAlgorithm> for yh_algorithm {
 impl From<yh_algorithm_enum> for ObjectAlgorithm {
     fn from(algorithm: yh_algorithm_enum) -> ObjectAlgorithm {
         match algorithm {
+            yh_algorithm_enum::YH_ALGO_UNKNOWN => ObjectAlgorithm::Unknown,
             yh_algorithm_enum::YH_ALGO_ANY => ObjectAlgorithm::ANY,
             yh_algorithm_enum::YH_ALGO_RSA_PKCS1_SHA1 => ObjectAlgorithm::RsaPkcs1Sha1,
             yh_algorithm_enum::YH_ALGO_RSA_PKCS1_SHA256 => ObjectAlgorithm::RsaPkcs1Sha256,
@@ -964,26 +970,33 @@ impl From<ObjectAlgorithm> for yh_algorithm_enum {
             ObjectAlgorithm::AesCbc => yh_algorithm_enum::YH_ALGO_AES_CBC,
             ObjectAlgorithm::AesKwp => yh_algorithm_enum::YH_ALGO_AES_KWP,
             ObjectAlgorithm::ANY => yh_algorithm_enum::YH_ALGO_ANY,
+            ObjectAlgorithm::Unknown => yh_algorithm_enum::YH_ALGO_UNKNOWN,
         }
     }
 }
 
 impl Display for ObjectAlgorithm {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut ptr: *const std::os::raw::c_char = std::ptr::null();
+        match self {
+            ObjectAlgorithm::ANY => write!(f, "ANY"),
+            ObjectAlgorithm::Unknown => write!(f, "UNKNOWN"),
+            _ =>  {
+                let mut ptr: *const std::os::raw::c_char = std::ptr::null();
 
-        unsafe {
-            error::result_from_libyh(lyh::yh_algo_to_string((*self).into(), &mut ptr))
-                .map_err(|_| fmt::Error)
-        }?;
+                unsafe {
+                    error::result_from_libyh(lyh::yh_algo_to_string((*self).into(), &mut ptr))
+                        .map_err(|_| fmt::Error)
+                }?;
 
-        let cstr = unsafe {
-            std::ffi::CStr::from_ptr(ptr)
-                .to_str()
-                .map_err(|_| fmt::Error)
-        }?;
+                let cstr = unsafe {
+                    std::ffi::CStr::from_ptr(ptr)
+                        .to_str()
+                        .map_err(|_| fmt::Error)
+                }?;
 
-        write!(f, "{}", cstr)
+                write!(f, "{}", cstr)
+            }
+        }
     }
 }
 
@@ -1174,6 +1187,7 @@ impl From<ObjectType> for yh_object_type_enum {
             ObjectType::OtpAeadKey => yh_object_type_enum::YH_OTP_AEAD_KEY,
             ObjectType::PublicKey => yh_object_type_enum::YH_PUBLIC_KEY,
             ObjectType::Any => yh_object_type_enum::YH_ANY,
+            ObjectType::Unknown => yh_object_type_enum::YH_UNKNOWN,
         }
     }
 }
@@ -1186,20 +1200,23 @@ impl<'a> From<&'a ObjectType> for yh_object_type {
 
 impl Display for ObjectType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut ptr: *const std::os::raw::c_char = std::ptr::null();
+        match self {
+            ObjectType::Any => write!(f, "Any"),
+            ObjectType::Unknown => write!(f, "Unknown"),
+            _ => {
+                let mut ptr: *const std::os::raw::c_char = std::ptr::null();
 
-        unsafe {
-            error::result_from_libyh(lyh::yh_type_to_string(self.into(), &mut ptr))
-                .map_err(|_| fmt::Error)
-        }?;
+                unsafe {
+                    error::result_from_libyh(lyh::yh_type_to_string(self.into(), &mut ptr)).map_err(|_| fmt::Error)
+                }?;
 
-        let cstr = unsafe {
-            std::ffi::CStr::from_ptr(ptr)
-                .to_str()
-                .map_err(|_| fmt::Error)
-        }?;
+                let cstr = unsafe {
+                    std::ffi::CStr::from_ptr(ptr).to_str().map_err(|_| fmt::Error)
+                }?;
 
-        write!(f, "{}", cstr)
+                write!(f, "{}", cstr)
+            }
+        }
     }
 }
 
@@ -1207,19 +1224,7 @@ impl<'a> From<&'a yh_object_descriptor> for ObjectHandle {
     fn from(descriptor: &'a yh_object_descriptor) -> Self {
         ObjectHandle {
             object_id: descriptor.id,
-            object_type: match descriptor.type_.into() {
-                yh_object_type_enum::YH_OPAQUE => ObjectType::Opaque,
-                yh_object_type_enum::YH_AUTHENTICATION_KEY => ObjectType::AuthenticationKey,
-                yh_object_type_enum::YH_ASYMMETRIC_KEY => ObjectType::AsymmetricKey,
-                yh_object_type_enum::YH_SYMMETRIC_KEY => ObjectType::SymmetricKey,
-                yh_object_type_enum::YH_WRAP_KEY => ObjectType::WrapKey,
-                yh_object_type_enum::YH_PUBLIC_WRAP_KEY => ObjectType::PublicWrapKey,
-                yh_object_type_enum::YH_HMAC_KEY => ObjectType::HmacKey,
-                yh_object_type_enum::YH_TEMPLATE => ObjectType::Template,
-                yh_object_type_enum::YH_OTP_AEAD_KEY => ObjectType::OtpAeadKey,
-                yh_object_type_enum::YH_PUBLIC_KEY => ObjectType::PublicKey,
-                yh_object_type_enum::YH_ANY => ObjectType::Any,
-            },
+            object_type: descriptor.type_.into(),
         }
     }
 }

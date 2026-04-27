@@ -91,7 +91,7 @@ pub enum yh_rc_enum {
     YHR_DEVICE_ALGORITHM_DISABLED = -31,
     #[num_enum(default)]
     /// Return value for unknown error codes
-    YHR_UNKNOWN_ERROR = -99
+    YHR_UNKNOWN_RETURN_CODE = i32::MIN
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -118,7 +118,7 @@ pub enum Error {
     /// Mismatch between expected and received length
     WrongLength,
 
-    /// MNot enough space to store data
+    /// Not enough space to store data
     BufferTooSmall,
 
     /// Unable to verify cryptogram
@@ -197,44 +197,6 @@ pub enum Error {
     Unknown
 }
 
-fn code_to_err(return_code: yh_rc_enum) -> Error {
-    match return_code {
-        yh_rc_enum::YHR_SUCCESS => Error::Success,
-        yh_rc_enum::YHR_MEMORY => Error::Memory,
-        yh_rc_enum::YHR_INIT_ERROR => Error::InitError,
-        yh_rc_enum::YHR_NET_ERROR => Error::NetworkError,
-        yh_rc_enum::YHR_CONNECTOR_NOT_FOUND => Error::ConnectorNotFound,
-        yh_rc_enum::YHR_INVALID_PARAMS => Error::InvalidParams,
-        yh_rc_enum::YHR_WRONG_LENGTH => Error::WrongLength,
-        yh_rc_enum::YHR_BUFFER_TOO_SMALL => Error::BufferTooSmall,
-        yh_rc_enum::YHR_CRYPTOGRAM_MISMATCH => Error::CryptogramMismatch,
-        yh_rc_enum::YHR_AUTH_SESSION_ERROR => Error::AuthSessionError,
-        yh_rc_enum::YHR_MAC_MISMATCH => Error::MacMismatch,
-        yh_rc_enum::YHR_DEVICE_OK => Error::DeviceOk,
-        yh_rc_enum::YHR_DEVICE_INV_COMMAND => Error::DeviceInvalidCommand,
-        yh_rc_enum::YHR_DEVICE_INV_DATA => Error::DeviceInvalidData,
-        yh_rc_enum::YHR_DEVICE_INV_SESSION => Error::DeviceInvalidSession,
-        yh_rc_enum::YHR_DEVICE_AUTH_FAIL => Error::DeviceAuthenticationFailed,
-        yh_rc_enum::YHR_DEVICE_SESSIONS_FULL => Error::DeviceSessionsFull,
-        yh_rc_enum::YHR_DEVICE_SESSION_FAILED => Error::DeviceSessionFailed,
-        yh_rc_enum::YHR_DEVICE_STORAGE_FAILED => Error::DeviceStorageFailed,
-        yh_rc_enum::YHR_DEVICE_WRONG_LENGTH => Error::DeviceWrongLength,
-        yh_rc_enum::YHR_DEVICE_INV_PERMISSION => Error::DeviceInvalidPermissions,
-        yh_rc_enum::YHR_DEVICE_LOG_FULL => Error::DeviceLogFull,
-        yh_rc_enum::YHR_DEVICE_OBJ_NOT_FOUND => Error::DeviceObjectNotFound,
-        yh_rc_enum::YHR_DEVICE_ID_ILLEGAL => Error::DeviceIdIllegal,
-        yh_rc_enum::YHR_DEVICE_INVALID_OTP => Error::DeviceInvalidOtp,
-        yh_rc_enum::YHR_DEVICE_DEMO_MODE => Error::DeviceDemoMode,
-        yh_rc_enum::YHR_DEVICE_CMD_UNEXECUTED => Error::DeviceCmdUnexecuted,
-        yh_rc_enum::YHR_GENERIC_ERROR => Error::GenericError,
-        yh_rc_enum::YHR_DEVICE_OBJECT_EXISTS => Error::ObjectExists,
-        yh_rc_enum::YHR_CONNECTOR_ERROR => Error::ConnectorError,
-        yh_rc_enum::YHR_DEVICE_SSH_CA_CONSTRAINT_VIOLATION => Error::SshCaConstraintViolation,
-        yh_rc_enum::YHR_DEVICE_ALGORITHM_DISABLED => Error::AlgorithmDisabled,
-        yh_rc_enum::YHR_UNKNOWN_ERROR => Error::Unknown
-    }
-}
-
 fn code_to_str(return_code: Error) -> &'static str {
     match return_code {
         Error::Success => "Success",
@@ -244,7 +206,7 @@ fn code_to_str(return_code: Error) -> &'static str {
         Error::ConnectorNotFound => "Unable to find a suitable connector",
         Error::InvalidParams => "Invalid argument to a function",
         Error::WrongLength => "Mismatch between expected and received length",
-        Error::BufferTooSmall => "MNot enough space to store data",
+        Error::BufferTooSmall => "Not enough space to store data",
         Error::CryptogramMismatch => "Unable to verify cryptogram",
         Error::AuthSessionError => "Unable to authenticate session",
         Error::MacMismatch => "Unable to verify MAC",
@@ -281,7 +243,41 @@ impl From<yh_rc> for Error {
 
 impl From<yh_rc_enum> for Error {
     fn from(return_code: yh_rc_enum) -> Self {
-        code_to_err(return_code)
+        match return_code {
+            yh_rc_enum::YHR_SUCCESS => Error::Success,
+            yh_rc_enum::YHR_MEMORY => Error::Memory,
+            yh_rc_enum::YHR_INIT_ERROR => Error::InitError,
+            yh_rc_enum::YHR_NET_ERROR => Error::NetworkError,
+            yh_rc_enum::YHR_CONNECTOR_NOT_FOUND => Error::ConnectorNotFound,
+            yh_rc_enum::YHR_INVALID_PARAMS => Error::InvalidParams,
+            yh_rc_enum::YHR_WRONG_LENGTH => Error::WrongLength,
+            yh_rc_enum::YHR_BUFFER_TOO_SMALL => Error::BufferTooSmall,
+            yh_rc_enum::YHR_CRYPTOGRAM_MISMATCH => Error::CryptogramMismatch,
+            yh_rc_enum::YHR_AUTH_SESSION_ERROR => Error::AuthSessionError,
+            yh_rc_enum::YHR_MAC_MISMATCH => Error::MacMismatch,
+            yh_rc_enum::YHR_DEVICE_OK => Error::DeviceOk,
+            yh_rc_enum::YHR_DEVICE_INV_COMMAND => Error::DeviceInvalidCommand,
+            yh_rc_enum::YHR_DEVICE_INV_DATA => Error::DeviceInvalidData,
+            yh_rc_enum::YHR_DEVICE_INV_SESSION => Error::DeviceInvalidSession,
+            yh_rc_enum::YHR_DEVICE_AUTH_FAIL => Error::DeviceAuthenticationFailed,
+            yh_rc_enum::YHR_DEVICE_SESSIONS_FULL => Error::DeviceSessionsFull,
+            yh_rc_enum::YHR_DEVICE_SESSION_FAILED => Error::DeviceSessionFailed,
+            yh_rc_enum::YHR_DEVICE_STORAGE_FAILED => Error::DeviceStorageFailed,
+            yh_rc_enum::YHR_DEVICE_WRONG_LENGTH => Error::DeviceWrongLength,
+            yh_rc_enum::YHR_DEVICE_INV_PERMISSION => Error::DeviceInvalidPermissions,
+            yh_rc_enum::YHR_DEVICE_LOG_FULL => Error::DeviceLogFull,
+            yh_rc_enum::YHR_DEVICE_OBJ_NOT_FOUND => Error::DeviceObjectNotFound,
+            yh_rc_enum::YHR_DEVICE_ID_ILLEGAL => Error::DeviceIdIllegal,
+            yh_rc_enum::YHR_DEVICE_INVALID_OTP => Error::DeviceInvalidOtp,
+            yh_rc_enum::YHR_DEVICE_DEMO_MODE => Error::DeviceDemoMode,
+            yh_rc_enum::YHR_DEVICE_CMD_UNEXECUTED => Error::DeviceCmdUnexecuted,
+            yh_rc_enum::YHR_GENERIC_ERROR => Error::GenericError,
+            yh_rc_enum::YHR_DEVICE_OBJECT_EXISTS => Error::ObjectExists,
+            yh_rc_enum::YHR_CONNECTOR_ERROR => Error::ConnectorError,
+            yh_rc_enum::YHR_DEVICE_SSH_CA_CONSTRAINT_VIOLATION => Error::SshCaConstraintViolation,
+            yh_rc_enum::YHR_DEVICE_ALGORITHM_DISABLED => Error::AlgorithmDisabled,
+            yh_rc_enum::YHR_UNKNOWN_RETURN_CODE => Error::Unknown
+        }
     }
 }
 

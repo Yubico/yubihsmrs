@@ -803,7 +803,7 @@ impl Session {
         wrapping_key_id: u16,
         bytes: &[u8],
     ) -> Result<ObjectHandle, Error> {
-        let mut object_type: lyh::yh_object_type = lyh::yh_object_type::default();
+        let mut object_type: lyh::yh_object_type = ObjectType::Any.into();
         let mut id: u16 = 0;
 
         let res = unsafe {
@@ -951,7 +951,7 @@ impl Session {
         oaep_label: &[u8],
         bytes: &[u8],
     ) -> Result<ObjectHandle, Error> {
-        let mut object_type: lyh::yh_object_type = lyh::yh_object_type::default();
+        let mut object_type: lyh::yh_object_type = ObjectType::Any.into();
         let mut id: u16 = 0;
 
         let res = unsafe {

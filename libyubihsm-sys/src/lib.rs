@@ -387,7 +387,9 @@ pub type yh_object_type = c_uint;
 /// Object types
 pub enum yh_object_type_enum {
     #[num_enum(default)]
-    /// Any object type (convenience value, not in libyubihsm)
+    /// Unknown type
+    YH_UNKNOWN = u32::MAX,
+    /// Any object type
     YH_ANY = 0x00,
     /// Opaque object
     YH_OPAQUE = 0x01,
@@ -419,6 +421,8 @@ pub type yh_algorithm = c_uint;
 /// Algorithms
 pub enum yh_algorithm_enum {
     #[num_enum(default)]
+    /// Unknown or unrecognized algorithm value
+    YH_ALGO_UNKNOWN = u32::MAX,
     /// Any algorithm (convenience value, not in libyubihsm)
     YH_ALGO_ANY = 0,
     /// RSA PKCS1v1.5 with SHA1
@@ -541,8 +545,8 @@ pub type yh_option = c_uint;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::FromPrimitive)]
 pub enum yh_option_enum {
     #[num_enum(default)]
-    /// No option (convenience value, not in libyubihsm)
-    YH_OPTION_NONE = 0,
+    /// Unknown or unrecognized option value
+    YH_OPTION_UNKNOWN = u32::MAX,
     /// Forced audit mode
     YH_OPTION_FORCE_AUDIT = 1,
     /// Audit logging per command
@@ -557,8 +561,8 @@ pub type yh_connector_option = c_uint;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, num_enum::FromPrimitive)]
 pub enum yh_connector_option_enum {
     #[num_enum(default)]
-    /// No connection (convenience value, not in libyubihsm)
-    YH_CONNECTOR_NONE = 0,
+    /// Unknown or unrecognized connector option value
+    YH_CONNECTOR_UNKNOWN = u32::MAX,
     /// File with CA certificate to validate the connector with (const char *) not
     /// implemented on Windows
     YH_CONNECTOR_HTTPS_CA = 1,
