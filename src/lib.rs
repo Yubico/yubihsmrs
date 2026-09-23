@@ -112,6 +112,10 @@ impl DeviceInfo {
     pub fn patch(&self) -> u8 {
         self.patch
     }
+    /// Algorithms supported by the connected device
+    pub fn algorithms(&self) -> Vec<ObjectAlgorithm> {
+        self.algorithms.iter().map(|a| ObjectAlgorithm::from(*a)).collect()
+    }
 }
 
 /// Initialize libyubihsm
