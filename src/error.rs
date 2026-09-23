@@ -31,6 +31,21 @@ pub enum Error {
     InvalidParameter(String),
 }
 
+impl Error {
+    /// True if the device rejected the authentication attempt itself
+    /// (wrong password/key material), as opposed to a communication or
+    /// other failure. Lets callers distinguish "bad credentials" from other
+    /// failures without needing to name `lyh::Error`'s variants themselves
+    /// (`libyubihsm-sys` isn't a direct dependency of most callers).
+    pub fn is_authentication_failure(&self) -> bool {
+        matches!(
+            self,
+            Error::LibYubiHsm(lyh::Error::CryptogramMismatch)
+                | Error::LibYubiHsm(lyh::Error::DeviceAuthenticationFailed)
+        )
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
