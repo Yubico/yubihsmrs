@@ -282,6 +282,11 @@ impl Drop for YubiHsm {
     }
 }
 
+// connector is a stable handle into libyubihsm, safe to move/share across
+// threads the same way Session's ptr below is.
+unsafe impl Send for YubiHsm {}
+unsafe impl Sync for YubiHsm {}
+
 unsafe impl Send for Session {}
 unsafe impl Sync for Session {}
 
