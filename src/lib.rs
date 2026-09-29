@@ -112,6 +112,10 @@ impl DeviceInfo {
     pub fn patch(&self) -> u8 {
         self.patch
     }
+    /// Algorithms supported by the connected device
+    pub fn algorithms(&self) -> Vec<ObjectAlgorithm> {
+        self.algorithms.iter().map(|a| ObjectAlgorithm::from(*a)).collect()
+    }
 }
 
 /// Initialize libyubihsm
@@ -277,6 +281,11 @@ impl Drop for YubiHsm {
         self.disconnect().unwrap_or(()); // NOTE(adma): ignore return value ...
     }
 }
+
+// connector is a stable handle into libyubihsm, safe to move/share across
+// threads the same way Session's ptr below is.
+unsafe impl Send for YubiHsm {}
+unsafe impl Sync for YubiHsm {}
 
 unsafe impl Send for Session {}
 unsafe impl Sync for Session {}
